@@ -12,6 +12,7 @@ class MCTree {
 public:
 	bool insertNode();
 	bool insertBranch();
+	bool insertGame();
 	int getTreeHeight();
 
 private:
