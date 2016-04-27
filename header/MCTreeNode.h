@@ -21,9 +21,9 @@ struct MCTreeNode {
 	unsigned int totalCount;
 	unordered_set<TraxRound> traxRounds;
 	MCTreeNode *parent;
-	vector<MCTreeNode> children;
-	MCTreeNode *leftSibling;
-	MCTreeNode *rightSibling;
+	vector<*MCTreeNode> children;
+//	MCTreeNode *leftSibling;
+//	MCTreeNode *rightSibling;
 };
 
 #endif /* MCTREENODE_H_ */
