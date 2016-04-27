@@ -1,5 +1,5 @@
 //============================================================================
-// Name        : TraxMonteCarlo.cpp
+// Name        : TraxMonteCarlo.cc
 // Author      : 
 // Version     :
 // Copyright   : Your copyright notice
