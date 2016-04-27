@@ -14,7 +14,7 @@ using namespace std;
 
 struct TraxRound {
 	// One game play - unique id
-	long long int gameId;
+	unsigned long long int gameId;
 
 	// Current round number
 	// 0 for the initial state
