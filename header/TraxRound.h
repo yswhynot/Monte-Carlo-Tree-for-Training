@@ -21,8 +21,8 @@ struct TraxRound {
 	// 1 for the 1st round
 	unsigned int roundIndex;
 
-	// Is me (1) or the opponent's turn (0) to play
-	bool isMe;
+	// Is White's turn (1) or the Red's turn (0) to play
+	bool isWhite;
 
 	// Current board representation
 	// Count from top left to bottom right

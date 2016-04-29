@@ -6,8 +6,8 @@
  */
 
 #include <bitset>
-#include <unordered_set>
 #include <vector>
+#include <utility>
 #include "TraxRound.h"
 
 using namespace std;
@@ -16,14 +16,16 @@ using namespace std;
 #define MCTREENODE_H_
 
 struct MCTreeNode {
+	unsigned long long int nodeId;
 	bitset<1200> boardBitset;
 	unsigned int winCount;
 	unsigned int totalCount;
-	unordered_set<TraxRound> traxRounds;
-	MCTreeNode *parent;
-	vector<*MCTreeNode> children;
-//	MCTreeNode *leftSibling;
-//	MCTreeNode *rightSibling;
+	vector<pair(unsigned long long int, unsigned long long int)> traxRounds;		// pair(gameId, roundId)
+	vector<MCTreeNode*> parents;
+	vector<unsigned long long int> parentIdGroup;
+	vector<MCTreeNode*> children;
+	vector<unsigned long long int> chidrenIdGroup;
+	bool isWhite;
 };
 
 #endif /* MCTREENODE_H_ */
