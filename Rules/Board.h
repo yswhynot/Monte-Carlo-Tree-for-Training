@@ -9,14 +9,20 @@ using namespace std;
 
 class Board {
 public:
-    bool forcePlay(int pos);
+    Board();
     bool updateBoard(int pos, char type);
+    void print();
 private:
+    /** member functions **/
+    bool forcePlay(int pos);
+    bool singleTileUpdate(int pos, char type);
+    int getRightEdge(int bitStart);
+    /** member variables **/
+    bool start;
     bitset<DIM> m_boardBitset;
     bitset<DIM> m_tempBoardBitset;
     int m_rowNum;
     int m_colNum;
-    int getRightEdge(int bitStart);
 };
 
 #endif /* BOARD_H_ */
