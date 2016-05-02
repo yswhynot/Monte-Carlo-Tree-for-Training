@@ -5,11 +5,14 @@
 int main() {
     /** Testing for Board **/
     Board board;
-    board.updateBoard(0,'/');
-    board.updateBoard(1,'\\');
-    board.updateBoard(20,'\\');
-    board.print();
+    int winner;
+    board.updateBoard(0, '/', &winner);
+    board.updateBoard(22, '\\', &winner);
+    board.updateBoard(41, '\\', &winner);
+    board.printType();
+    board.printBit();
     /** Testing for Ann **/
+    /*
     int x[7][3] = {{0,0,0},{0,0,1},{0,1,0},{0,1,1},{1,0,0},{1,0,1},{1,1,0}};
     int y[7][3] = {{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0}};
 
@@ -27,6 +30,7 @@ int main() {
 
     delete [] xx;
     delete [] yy;
+    */
 
     return 0;
 }
