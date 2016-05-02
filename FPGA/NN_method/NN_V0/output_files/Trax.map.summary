@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Mon May 02 17:02:25 2016
+Quartus Prime Version : 15.1.0 Build 185 10/21/2015 SJ Standard Edition
+Revision Name : Trax
+Top-level Entity Name : Trax
+Family : Cyclone IV E
+Total logic elements : 10,775
+    Total combinational functions : 9,444
+    Dedicated logic registers : 2,565
+Total registers : 2565
+Total pins : 10
+Total virtual pins : 0
+Total memory bits : 0
+Embedded Multiplier 9-bit elements : 0
+Total PLLs : 1

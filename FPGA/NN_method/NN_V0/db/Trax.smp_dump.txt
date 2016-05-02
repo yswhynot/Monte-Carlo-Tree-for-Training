@@ -1,0 +1,59 @@
+
+State Machine - |Trax|top_state
+Name top_state.send_move top_state.Neural_network top_state.board_representation top_state.idle 
+top_state.idle 0 0 0 0 
+top_state.board_representation 0 0 1 1 
+top_state.Neural_network 0 1 0 1 
+top_state.send_move 1 0 0 1 
+
+State Machine - |Trax|move_translator:move_translator_inst|Tx_state
+Name Tx_state.line_feed Tx_state.tile_pattern Tx_state.axis_y Tx_state.axis_x Tx_state.idle 
+Tx_state.idle 0 0 0 0 0 
+Tx_state.axis_x 0 0 0 1 1 
+Tx_state.axis_y 0 0 1 0 1 
+Tx_state.tile_pattern 0 1 0 0 1 
+Tx_state.line_feed 1 0 0 0 1 
+
+State Machine - |Trax|move_translator:move_translator_inst|TX:uut0|state
+Name state.stop state.bit7 state.bit6 state.bit5 state.bit4 state.bit3 state.bit2 state.bit1 state.bit0 state.start state.idle 
+state.idle 0 0 0 0 0 0 0 0 0 0 0 
+state.start 0 0 0 0 0 0 0 0 0 1 1 
+state.bit0 0 0 0 0 0 0 0 0 1 0 1 
+state.bit1 0 0 0 0 0 0 0 1 0 0 1 
+state.bit2 0 0 0 0 0 0 1 0 0 0 1 
+state.bit3 0 0 0 0 0 1 0 0 0 0 1 
+state.bit4 0 0 0 0 1 0 0 0 0 0 1 
+state.bit5 0 0 0 1 0 0 0 0 0 0 1 
+state.bit6 0 0 1 0 0 0 0 0 0 0 1 
+state.bit7 0 1 0 0 0 0 0 0 0 0 1 
+state.stop 1 0 0 0 0 0 0 0 0 0 1 
+
+State Machine - |Trax|command_translator:command_translator_inst|Rx_state
+Name Rx_state.tile_pattern Rx_state.axis_y Rx_state.axis_x Rx_state.idle 
+Rx_state.idle 0 0 0 0 
+Rx_state.axis_x 0 0 1 1 
+Rx_state.axis_y 0 1 0 1 
+Rx_state.tile_pattern 1 0 0 1 
+
+State Machine - |Trax|command_translator:command_translator_inst|RX:uut0|state
+Name state.stop state.bit7 state.bit6 state.bit5 state.bit4 state.bit3 state.bit2 state.bit1 state.bit0 state.start state.idle 
+state.idle 0 0 0 0 0 0 0 0 0 0 0 
+state.start 0 0 0 0 0 0 0 0 0 1 1 
+state.bit0 0 0 0 0 0 0 0 0 1 0 1 
+state.bit1 0 0 0 0 0 0 0 1 0 0 1 
+state.bit2 0 0 0 0 0 0 1 0 0 0 1 
+state.bit3 0 0 0 0 0 1 0 0 0 0 1 
+state.bit4 0 0 0 0 1 0 0 0 0 0 1 
+state.bit5 0 0 0 1 0 0 0 0 0 0 1 
+state.bit6 0 0 1 0 0 0 0 0 0 0 1 
+state.bit7 0 1 0 0 0 0 0 0 0 0 1 
+state.stop 1 0 0 0 0 0 0 0 0 0 1 
+
+State Machine - |Trax|board_representor:board_representor_inst|rep_state
+Name rep_state.finish rep_state.force_play rep_state.check_illegal rep_state.shift_board_y rep_state.shift_board_x rep_state.idle 
+rep_state.idle 0 0 0 0 0 0 
+rep_state.shift_board_x 0 0 0 0 1 1 
+rep_state.shift_board_y 0 0 0 1 0 1 
+rep_state.check_illegal 0 0 1 0 0 1 
+rep_state.force_play 0 1 0 0 0 1 
+rep_state.finish 1 0 0 0 0 1 

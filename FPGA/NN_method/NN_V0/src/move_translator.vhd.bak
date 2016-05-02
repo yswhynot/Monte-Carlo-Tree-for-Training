@@ -1,0 +1,36 @@
+----------------------------------------------------------------------------------
+-- Company: The Hong Kong Polytechnic University (FPGA interest group led by Dr. Bruce Sham)
+-- Engineer/Student: LYU Yetao Aaron
+-- 
+-- Create Date: 20/Mar/2016
+-- Design Name: BetaTrax_V0
+-- Module Name: move_translator
+-- Project Name: BetaTrax
+-- Target Devices: EP4CE115F29C8
+-- Tool versions: Quartus II 13.0sp1 (64-bit)
+-- Description: The move_translator will translate the tile type into corresponding comamand. 
+--
+-- Dependencies: N/A
+--
+-- Revision: 
+-- Revision 0.01 - File Created
+-- Additional Comments: 
+--
+----------------------------------------------------------------------------------
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity move_translator is
+port(
+
+
+);
+end move_translator;
+
+architecture Behavioral of move_translator is
+
+begin
+
+end Behavioral;
