@@ -6,12 +6,15 @@ using namespace std;
 
 #define BOARDWIDTH 20
 #define DIM 1200
+#define ALLDIM 1600
 #define LINEGAP 8
 
 class Board {
 public:
     Board();
     void reset();
+    int updateBoardByCommands(string cmds);
+    bool updateBoardByCommand(string cmd, int* winner);
     bool updateBoard(int pos, char type, int* winner);
     void printType();
     void printBit();
@@ -30,7 +33,7 @@ private:
     int m_maxCol;
     int m_tempMaxRow;
     int m_tempMaxCol;
-    int m_paths[BOARDWIDTH * BOARDWIDTH * 4]; // Store bit ID plus 1
+    int m_paths[ALLDIM]; // Store bit ID plus 1
 };
 
 #endif /* BOARD_H_ */
