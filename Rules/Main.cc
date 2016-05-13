@@ -1,16 +1,16 @@
 #include "Board.h"
 #include "Ann.h"
 
+#include <iostream>
+using namespace std;
 
 int main() {
     /** Testing for Board **/
     Board board;
     int winner;
-    board.updateBoard(0, '/', &winner);
-    board.updateBoard(22, '\\', &winner);
-    board.updateBoard(41, '\\', &winner);
+    winner = board.updateBoardByCommands(string("@0/ A0/ A0/ @1/ B0/ C3\\ D3+ D0\\ @2\\ C1+ A4/ @4/ F5/"));
     board.printType();
-    board.printBit();
+    cout << "Player "<< winner << " wins the game.\n";
     /** Testing for Ann **/
     /*
     int x[7][3] = {{0,0,0},{0,0,1},{0,1,0},{0,1,1},{1,0,0},{1,0,1},{1,1,0}};
