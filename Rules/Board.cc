@@ -25,11 +25,15 @@ int Board::updateBoardByCommands(string cmds) {
     int last = 0;
     for (int i = 0; i < cmds.length(); i++) {
         if (cmds[i] - ' ' == 0) {
-            this->updateBoardByCommand(cmds.substr(last, i - last), &winner);
+            if (!this->updateBoardByCommand(cmds.substr(last, i - last), &winner)) {
+                return -1;
+            }
             last = i + 1;
         }
         if (i == cmds.length() - 1) {
-            this->updateBoardByCommand(cmds.substr(last), &winner);
+            if (!this->updateBoardByCommand(cmds.substr(last), &winner)) {
+                return -1;
+            }
         }
     }
     return winner;
@@ -956,39 +960,8 @@ bool Board::forcePlay(int pos) {
     int col = pos % BOARDWIDTH;
 
     /* Check which position no need to force play (since has tile already) */
-    int topFlag = false, leftFlag = false, bottomFlag = false, rightFlag = false;
-    // Check top
-    if (row >= 1) {
-        int bitStart = ((row - 1) * BOARDWIDTH + col) * 3;
-        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
-            this->m_tempBoardBitset.test(bitStart + 2)) {
-            topFlag = true;
-        }
-    }
-    // Check left
-    if (col >= 1) {
-        int bitStart = (row * BOARDWIDTH + col - 1) * 3;
-        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
-            this->m_tempBoardBitset.test(bitStart + 2)) {
-            leftFlag = true;
-        }
-    }
-    // Check bottom
-    if (row + 1 < BOARDWIDTH) {
-        int bitStart = ((row + 1) * BOARDWIDTH + col) * 3;
-        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
-            this->m_tempBoardBitset.test(bitStart + 2)) {
-            bottomFlag = true;
-        }
-    }
-    // Check right
-    if (col + 1 < BOARDWIDTH) {
-        int bitStart = (row * BOARDWIDTH + col + 1) * 3;
-        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
-            this->m_tempBoardBitset.test(bitStart + 2)) {
-            rightFlag = true;
-        }
-    }
+    bool topFlag = false, leftFlag = false, bottomFlag = false, rightFlag = false;
+    this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
 
     /* Check force play */
     // Check top
@@ -1001,6 +974,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3] == this->m_tempBoardBitset[bitStart + 2]) {
                     if (singleTileUpdate((row - 1) * BOARDWIDTH + col, '+') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1016,6 +991,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3] == this->m_tempBoardBitset[bitStart + this->getRightEdge(bitStart)]) {
                     if (singleTileUpdate((row - 1) * BOARDWIDTH + col, '\\') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1025,6 +1002,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 1] == this->m_tempBoardBitset[bitStart + 2]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col - 1, '\\') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1040,6 +1019,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 1] == this->m_tempBoardBitset[bitStart + this->getRightEdge(bitStart)]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col - 1, '+') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1056,6 +1037,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 1] == this->m_tempBoardBitset[bitStart]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col - 1, '/') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1065,6 +1048,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 2] == this->m_tempBoardBitset[bitStart + this->getRightEdge(bitStart)]) {
                     if (singleTileUpdate((row + 1) * BOARDWIDTH + col, '/') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1080,6 +1065,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 2] == this->m_tempBoardBitset[bitStart]) {
                     if (singleTileUpdate((row + 1) * BOARDWIDTH + col, '+') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1095,6 +1082,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + 2] == this->m_tempBoardBitset[bitStart + 1]) {
                     if (singleTileUpdate((row + 1) * BOARDWIDTH + col, '\\') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1104,6 +1093,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + this->getRightEdge(pos * 3)] == this->m_tempBoardBitset[bitStart]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col + 1, '\\') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1119,6 +1110,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + this->getRightEdge(pos * 3)] == this->m_tempBoardBitset[bitStart + 1]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col + 1, '+') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1134,6 +1127,8 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3 + this->getRightEdge(pos * 3)] == this->m_tempBoardBitset[bitStart + 2]) {
                     if (singleTileUpdate(row * BOARDWIDTH + col + 1, '/') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
@@ -1143,12 +1138,49 @@ bool Board::forcePlay(int pos) {
                 if (this->m_tempBoardBitset[pos * 3] == this->m_tempBoardBitset[bitStart + 1]) {
                     if (singleTileUpdate((row - 1) * BOARDWIDTH + col, '/') == false) {
                         return false;
+                    } else {
+                        this->checkFourNeighbours(row, col, &topFlag, &leftFlag, &bottomFlag, &rightFlag);
                     }
                 }
             }
         }
     }
     return true;
+}
+
+bool Board::checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag) {
+    // Check top
+    if (row >= 1) {
+        int bitStart = ((row - 1) * BOARDWIDTH + col) * 3;
+        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
+            this->m_tempBoardBitset.test(bitStart + 2)) {
+            *topFlag = true;
+        }
+    }
+    // Check left
+    if (col >= 1) {
+        int bitStart = (row * BOARDWIDTH + col - 1) * 3;
+        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
+            this->m_tempBoardBitset.test(bitStart + 2)) {
+            *leftFlag = true;
+        }
+    }
+    // Check bottom
+    if (row + 1 < BOARDWIDTH) {
+        int bitStart = ((row + 1) * BOARDWIDTH + col) * 3;
+        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
+            this->m_tempBoardBitset.test(bitStart + 2)) {
+            *bottomFlag = true;
+        }
+    }
+    // Check right
+    if (col + 1 < BOARDWIDTH) {
+        int bitStart = (row * BOARDWIDTH + col + 1) * 3;
+        if (this->m_tempBoardBitset.test(bitStart) || this->m_tempBoardBitset.test(bitStart + 1) ||
+            this->m_tempBoardBitset.test(bitStart + 2)) {
+            *rightFlag = true;
+        }
+    }
 }
 
 void Board::shiftTempBoardBitset(int pos) {
@@ -1274,6 +1306,7 @@ void Board::printBit() {
 TileInfo* Board::getTileInfos(bool white) {
     // Pre-handle
     int compare = white? 0: 1;
+    this->m_tempBoardBitset = this->m_boardBitset; // For function getRightEdge()
 
     for (int row = 0; row < BOARDWIDTH; row++) {
         for (int col = 0; col < BOARDWIDTH; col++) {

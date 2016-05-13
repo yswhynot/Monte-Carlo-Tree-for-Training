@@ -27,6 +27,7 @@ public:
 private:
     /** member functions **/
     bool forcePlay(int pos);
+    bool checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag);
     bool singleTileUpdate(int pos, char type);
     void shiftTempBoardBitset(int pos);
     int getRightEdge(int bitStart);
