@@ -9,8 +9,12 @@ Board::Board() {
 }
 
 void Board::reset() {
+    // Reset start and end
     this->m_start = true;
     this->m_winner = 0;
+    // Reset board
+    this->m_boardBitset.reset();
+    // Reset paths
     for (int i = 0; i < BOARDWIDTH * BOARDWIDTH * 4; i++) {
         this->m_paths[i] = 0;
     }
@@ -72,12 +76,18 @@ bool Board::updateBoard(int pos, char type, int* winner) {
     this->m_tempBoardBitset = this->m_boardBitset;
     this->m_tempMaxRow = this->m_maxRow;
     this->m_tempMaxCol = this->m_maxCol;
+    for (int i = 0; i < ALLDIM; i++) {
+        this->m_tempPaths[i] = this->m_paths[i];
+    }
     /* Perform single-tile-update and force play */
     if (this->singleTileUpdate(pos, type)) {
         this->shiftTempBoardBitset(pos); // Shift the board
         this->m_boardBitset = this->m_tempBoardBitset; // Update the board
         this->m_maxRow = this->m_tempMaxRow;
         this->m_maxCol = this->m_tempMaxCol;
+        for (int i = 0; i < ALLDIM; i++) {
+            this->m_paths[i] = this->m_tempPaths[i];
+        }
         *winner = this->m_winner; // Output winner
         return true;
     } else {
@@ -95,20 +105,20 @@ bool Board::singleTileUpdate(int pos, char type) {
                 this->m_tempBoardBitset[1] = 1;
                 this->m_tempBoardBitset[2] = 0;
                 // Update paths
-                this->m_paths[0] = 3; // 2 + 1
-                this->m_paths[1] = 4; // 3 + 1
-                this->m_paths[2] = 1; // 0 + 1
-                this->m_paths[3] = 2; // 1 + 1
+                this->m_tempPaths[0] = 3; // 2 + 1
+                this->m_tempPaths[1] = 4; // 3 + 1
+                this->m_tempPaths[2] = 1; // 0 + 1
+                this->m_tempPaths[3] = 2; // 1 + 1
                 break;
             case '/':
                 this->m_tempBoardBitset[0] = 0;
                 this->m_tempBoardBitset[1] = 0;
                 this->m_tempBoardBitset[2] = 1;
                 // Update paths
-                this->m_paths[0] = 2; // 1 + 1
-                this->m_paths[1] = 1; // 0 + 1
-                this->m_paths[2] = 4; // 3 + 1
-                this->m_paths[3] = 3; // 2 + 1
+                this->m_tempPaths[0] = 2; // 1 + 1
+                this->m_tempPaths[1] = 1; // 0 + 1
+                this->m_tempPaths[2] = 4; // 3 + 1
+                this->m_tempPaths[3] = 3; // 2 + 1
                 break;
             default: return false;
         }
@@ -239,8 +249,8 @@ bool Board::singleTileUpdate(int pos, char type) {
                 // Check top and bottom
                 if (topFlag && bottomFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[topPathPos + 2] == bottomPathPos + 1) &&
-                        (this->m_paths[bottomPathPos] == topPathPos + 3)) {
+                    if ((this->m_tempPaths[topPathPos + 2] == bottomPathPos + 1) &&
+                        (this->m_tempPaths[bottomPathPos] == topPathPos + 3)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3)) {
                             this->m_winner = 2;
@@ -249,9 +259,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[topPathPos + 2] - 1;
+                        int endpointOne = this->m_tempPaths[topPathPos + 2] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[bottomPathPos] - 1;
+                        int endpointTwo = this->m_tempPaths[bottomPathPos] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -320,28 +330,28 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[topPathPos + 2] - 1] = this->m_paths[bottomPathPos];
-                        this->m_paths[this->m_paths[bottomPathPos] - 1] = this->m_paths[topPathPos + 2];
-                        this->m_paths[topPathPos + 2] = 0;
-                        this->m_paths[bottomPathPos] = 0;
+                        this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = this->m_tempPaths[bottomPathPos];
+                        this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = this->m_tempPaths[topPathPos + 2];
+                        this->m_tempPaths[topPathPos + 2] = 0;
+                        this->m_tempPaths[bottomPathPos] = 0;
                     }
                 } else if (topFlag) {
-                    this->m_paths[this->m_paths[topPathPos + 2] - 1] = pos * 4 + 3;
-                    this->m_paths[pos * 4 + 2] = this->m_paths[topPathPos + 2];
-                    this->m_paths[topPathPos + 2] = 0;
+                    this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[topPathPos + 2];
+                    this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (bottomFlag) {
-                    this->m_paths[this->m_paths[bottomPathPos] - 1] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = this->m_paths[bottomPathPos];
-                    this->m_paths[bottomPathPos] = 0;
+                    this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = this->m_tempPaths[bottomPathPos];
+                    this->m_tempPaths[bottomPathPos] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 2] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = pos * 4 + 3;
                 }
                 // Check left and right
                 if (leftFlag && rightFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[leftPathPos + 3] == rightPathPos + 2) &&
-                        (this->m_paths[rightPathPos + 1] == leftPathPos + 4)) {
+                    if ((this->m_tempPaths[leftPathPos + 3] == rightPathPos + 2) &&
+                        (this->m_tempPaths[rightPathPos + 1] == leftPathPos + 4)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
                             this->m_winner = 2;
@@ -350,9 +360,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[leftPathPos + 3] - 1;
+                        int endpointOne = this->m_tempPaths[leftPathPos + 3] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[rightPathPos + 1] - 1;
+                        int endpointTwo = this->m_tempPaths[rightPathPos + 1] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -421,22 +431,22 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[leftPathPos + 3] - 1] = this->m_paths[rightPathPos + 1];
-                        this->m_paths[this->m_paths[rightPathPos + 1] - 1] = this->m_paths[leftPathPos + 3];
-                        this->m_paths[leftPathPos + 3] = 0;
-                        this->m_paths[rightPathPos + 1] = 0;
+                        this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = this->m_tempPaths[rightPathPos + 1];
+                        this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = this->m_tempPaths[leftPathPos + 3];
+                        this->m_tempPaths[leftPathPos + 3] = 0;
+                        this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (leftFlag) {
-                    this->m_paths[this->m_paths[leftPathPos + 3] - 1] = pos * 4 + 4;
-                    this->m_paths[pos * 4 + 3] = this->m_paths[leftPathPos + 3];
-                    this->m_paths[leftPathPos + 3] = 0;
+                    this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[leftPathPos + 3];
+                    this->m_tempPaths[leftPathPos + 3] = 0;
                 } else if (rightFlag) {
-                    this->m_paths[this->m_paths[rightPathPos + 1] - 1] = pos * 4 + 2;
-                    this->m_paths[pos * 4 + 1] = this->m_paths[rightPathPos + 1];
-                    this->m_paths[rightPathPos + 1] = 0;
+                    this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[rightPathPos + 1];
+                    this->m_tempPaths[rightPathPos + 1] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 3] = pos * 4 + 2;
-                    this->m_paths[pos * 4 + 1] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = pos * 4 + 4;
                 }
             }
             break;
@@ -484,8 +494,8 @@ bool Board::singleTileUpdate(int pos, char type) {
                 // Check top and right
                 if (topFlag && rightFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[topPathPos + 2] == rightPathPos + 2) &&
-                        (this->m_paths[rightPathPos + 1] == topPathPos + 3)) {
+                    if ((this->m_tempPaths[topPathPos + 2] == rightPathPos + 2) &&
+                        (this->m_tempPaths[rightPathPos + 1] == topPathPos + 3)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3)) {
                             this->m_winner = 2;
@@ -494,9 +504,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[topPathPos + 2] - 1;
+                        int endpointOne = this->m_tempPaths[topPathPos + 2] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[rightPathPos + 1] - 1;
+                        int endpointTwo = this->m_tempPaths[rightPathPos + 1] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -565,28 +575,28 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[topPathPos + 2] - 1] = this->m_paths[rightPathPos + 1];
-                        this->m_paths[this->m_paths[rightPathPos + 1] - 1] = this->m_paths[topPathPos + 2];
-                        this->m_paths[topPathPos + 2] = 0;
-                        this->m_paths[rightPathPos + 1] = 0;
+                        this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = this->m_tempPaths[rightPathPos + 1];
+                        this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = this->m_tempPaths[topPathPos + 2];
+                        this->m_tempPaths[topPathPos + 2] = 0;
+                        this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (topFlag) {
-                    this->m_paths[this->m_paths[topPathPos + 2] - 1] = pos * 4 + 4;
-                    this->m_paths[pos * 4 + 3] = this->m_paths[topPathPos + 2];
-                    this->m_paths[topPathPos + 2] = 0;
+                    this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[topPathPos + 2];
+                    this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (rightFlag) {
-                    this->m_paths[this->m_paths[rightPathPos + 1] - 1] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = this->m_paths[rightPathPos + 1];
-                    this->m_paths[rightPathPos + 1] = 0;
+                    this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = this->m_tempPaths[rightPathPos + 1];
+                    this->m_tempPaths[rightPathPos + 1] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 3] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = pos * 4 + 4;
                 }
                 // Check left and bottom
                 if (leftFlag && bottomFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[leftPathPos + 3] == bottomPathPos + 1) &&
-                        (this->m_paths[bottomPathPos] == leftPathPos + 4)) {
+                    if ((this->m_tempPaths[leftPathPos + 3] == bottomPathPos + 1) &&
+                        (this->m_tempPaths[bottomPathPos] == leftPathPos + 4)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
                             this->m_winner = 2;
@@ -595,9 +605,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[leftPathPos + 3] - 1;
+                        int endpointOne = this->m_tempPaths[leftPathPos + 3] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[bottomPathPos] - 1;
+                        int endpointTwo = this->m_tempPaths[bottomPathPos] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -666,22 +676,22 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[leftPathPos + 3] - 1] = this->m_paths[bottomPathPos];
-                        this->m_paths[this->m_paths[bottomPathPos] - 1] = this->m_paths[leftPathPos + 3];
-                        this->m_paths[leftPathPos + 3] = 0;
-                        this->m_paths[bottomPathPos] = 0;
+                        this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = this->m_tempPaths[bottomPathPos];
+                        this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = this->m_tempPaths[leftPathPos + 3];
+                        this->m_tempPaths[leftPathPos + 3] = 0;
+                        this->m_tempPaths[bottomPathPos] = 0;
                     }
                 } else if (leftFlag) {
-                    this->m_paths[this->m_paths[leftPathPos + 3] - 1] = pos * 4 + 3;
-                    this->m_paths[pos * 4 + 2] = this->m_paths[leftPathPos + 3];
-                    this->m_paths[leftPathPos + 3] = 0;
+                    this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[leftPathPos + 3];
+                    this->m_tempPaths[leftPathPos + 3] = 0;
                 } else if (bottomFlag) {
-                    this->m_paths[this->m_paths[bottomPathPos] - 1] = pos * 4 + 2;
-                    this->m_paths[pos * 4 + 1] = this->m_paths[bottomPathPos];
-                    this->m_paths[bottomPathPos] = 0;
+                    this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[bottomPathPos];
+                    this->m_tempPaths[bottomPathPos] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 2] = pos * 4 + 2;
-                    this->m_paths[pos * 4 + 1] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = pos * 4 + 3;
                 }
             }
             break;
@@ -729,8 +739,8 @@ bool Board::singleTileUpdate(int pos, char type) {
                 // Check top and left
                 if (topFlag && leftFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[topPathPos + 2] == leftPathPos + 4) &&
-                        (this->m_paths[leftPathPos + 3] == topPathPos + 3)) {
+                    if ((this->m_tempPaths[topPathPos + 2] == leftPathPos + 4) &&
+                        (this->m_tempPaths[leftPathPos + 3] == topPathPos + 3)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3)) {
                             this->m_winner = 2;
@@ -739,9 +749,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[topPathPos + 2] - 1;
+                        int endpointOne = this->m_tempPaths[topPathPos + 2] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[leftPathPos + 3] - 1;
+                        int endpointTwo = this->m_tempPaths[leftPathPos + 3] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -810,28 +820,28 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[topPathPos + 2] - 1] = this->m_paths[leftPathPos + 3];
-                        this->m_paths[this->m_paths[leftPathPos + 3] - 1] = this->m_paths[topPathPos + 2];
-                        this->m_paths[topPathPos + 2] = 0;
-                        this->m_paths[leftPathPos + 3] = 0;
+                        this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = this->m_tempPaths[leftPathPos + 3];
+                        this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = this->m_tempPaths[topPathPos + 2];
+                        this->m_tempPaths[topPathPos + 2] = 0;
+                        this->m_tempPaths[leftPathPos + 3] = 0;
                     }
                 } else if (topFlag) {
-                    this->m_paths[this->m_paths[topPathPos + 2] - 1] = pos * 4 + 2;
-                    this->m_paths[pos * 4 + 1] = this->m_paths[topPathPos + 2];
-                    this->m_paths[topPathPos + 2] = 0;
+                    this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[topPathPos + 2];
+                    this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (leftFlag) {
-                    this->m_paths[this->m_paths[leftPathPos + 3] - 1] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = this->m_paths[leftPathPos + 3];
-                    this->m_paths[leftPathPos + 3] = 0;
+                    this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = this->m_tempPaths[leftPathPos + 3];
+                    this->m_tempPaths[leftPathPos + 3] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 1] = pos * 4 + 1;
-                    this->m_paths[pos * 4] = pos * 4 + 2;
+                    this->m_tempPaths[pos * 4 + 1] = pos * 4 + 1;
+                    this->m_tempPaths[pos * 4] = pos * 4 + 2;
                 }
                 // Check bottom and right
                 if (bottomFlag && rightFlag) {
                     // Check if win by loop
-                    if ((this->m_paths[bottomPathPos] == rightPathPos + 2) &&
-                        (this->m_paths[rightPathPos + 1] == bottomPathPos + 1)) {
+                    if ((this->m_tempPaths[bottomPathPos] == rightPathPos + 2) &&
+                        (this->m_tempPaths[rightPathPos + 1] == bottomPathPos + 1)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 2)) {
                             this->m_winner = 2;
@@ -840,9 +850,9 @@ bool Board::singleTileUpdate(int pos, char type) {
                         }
                     } else {
                         /* Check if win by line */
-                        int endpointOne = this->m_paths[bottomPathPos] - 1;
+                        int endpointOne = this->m_tempPaths[bottomPathPos] - 1;
                         int edgeOne = endpointOne % 4;
-                        int endpointTwo = this->m_paths[rightPathPos + 1] - 1;
+                        int endpointTwo = this->m_tempPaths[rightPathPos + 1] - 1;
                         int edgeTwo = endpointTwo % 4;
 
                         int posOne = endpointOne / 4;
@@ -911,22 +921,22 @@ bool Board::singleTileUpdate(int pos, char type) {
                             }
                         }
                         /* Merge two paths */
-                        this->m_paths[this->m_paths[bottomPathPos] - 1] = this->m_paths[rightPathPos + 1];
-                        this->m_paths[this->m_paths[rightPathPos + 1] - 1] = this->m_paths[bottomPathPos];
-                        this->m_paths[bottomPathPos] = 0;
-                        this->m_paths[rightPathPos + 1] = 0;
+                        this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = this->m_tempPaths[rightPathPos + 1];
+                        this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = this->m_tempPaths[bottomPathPos];
+                        this->m_tempPaths[bottomPathPos] = 0;
+                        this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (bottomFlag) {
-                    this->m_paths[this->m_paths[bottomPathPos] - 1] = pos * 4 + 4;
-                    this->m_paths[pos * 4 + 3] = this->m_paths[bottomPathPos];
-                    this->m_paths[bottomPathPos] = 0;
+                    this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[bottomPathPos];
+                    this->m_tempPaths[bottomPathPos] = 0;
                 } else if (rightFlag) {
-                    this->m_paths[this->m_paths[rightPathPos + 1] - 1] = pos * 4 + 3;
-                    this->m_paths[pos * 4 + 2] = this->m_paths[rightPathPos + 1];
-                    this->m_paths[rightPathPos + 1] = 0;
+                    this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[rightPathPos + 1];
+                    this->m_tempPaths[rightPathPos + 1] = 0;
                 } else {
-                    this->m_paths[pos * 4 + 3] = pos * 4 + 3;
-                    this->m_paths[pos * 4 + 2] = pos * 4 + 4;
+                    this->m_tempPaths[pos * 4 + 3] = pos * 4 + 3;
+                    this->m_tempPaths[pos * 4 + 2] = pos * 4 + 4;
                 }
             }
             break;
@@ -1158,12 +1168,12 @@ void Board::shiftTempBoardBitset(int pos) {
             shiftedPaths[i] = 0;
         }
         for (int bit = 0; bit < ALLDIM- BOARDWIDTH * 4; bit++) {
-            if (this->m_paths[bit] != 0) {
-                shiftedPaths[bit + BOARDWIDTH * 4] = this->m_paths[bit] + BOARDWIDTH * 4;
+            if (this->m_tempPaths[bit] != 0) {
+                shiftedPaths[bit + BOARDWIDTH * 4] = this->m_tempPaths[bit] + BOARDWIDTH * 4;
             }
         }
         for (int i = 0; i < ALLDIM; i++) {
-            this->m_paths[i] = shiftedPaths[i];
+            this->m_tempPaths[i] = shiftedPaths[i];
         }
         // Update maxRow
         this->m_tempMaxRow++;
@@ -1187,13 +1197,13 @@ void Board::shiftTempBoardBitset(int pos) {
         for (int rr = 0; rr < BOARDWIDTH; rr++) {
             for (int cBit = 0; cBit < (BOARDWIDTH - 1) * 4; cBit++) {
                 int bit = (rr * BOARDWIDTH) * 4 + cBit;
-                if (this->m_paths[bit] != 0) {
-                    shiftedPaths[bit + 4] = this->m_paths[bit] + 4;
+                if (this->m_tempPaths[bit] != 0) {
+                    shiftedPaths[bit + 4] = this->m_tempPaths[bit] + 4;
                 }
             }
         }
         for (int i = 0; i < ALLDIM; i++) {
-            this->m_paths[i] = shiftedPaths[i];
+            this->m_tempPaths[i] = shiftedPaths[i];
         }
         // Update maxCol
         this->m_tempMaxCol++;
@@ -1226,9 +1236,9 @@ void Board::printType() {
         for (int col = 0; col < BOARDWIDTH; col++) {
             int bitStart = (row * BOARDWIDTH + col) * 3;
             bitset<3> type;
-            type[2] = this->m_tempBoardBitset[bitStart];
-            type[1] = this->m_tempBoardBitset[bitStart + 1];
-            type[0] = this->m_tempBoardBitset[bitStart + 2];
+            type[2] = this->m_boardBitset[bitStart];
+            type[1] = this->m_boardBitset[bitStart + 1];
+            type[0] = this->m_boardBitset[bitStart + 2];
 
             switch (type.to_ulong()) {
                 case 0: cout << " "; break;
@@ -1254,9 +1264,100 @@ void Board::printBit() {
     for (int row = 0; row < BOARDWIDTH; row++) {
         for (int col = 0; col < BOARDWIDTH; col++) {
             int bitStart = (row * BOARDWIDTH + col) * 3;
-            cout << this->m_tempBoardBitset[bitStart] << this->m_tempBoardBitset[bitStart + 1]
-                 << this->m_tempBoardBitset[bitStart + 2] << " ";
+            cout << this->m_boardBitset[bitStart] << this->m_boardBitset[bitStart + 1]
+                 << this->m_boardBitset[bitStart + 2] << " ";
         }
         cout << "\n";
+    }
+}
+
+TileInfo* Board::getTileInfos(bool white) {
+    // Pre-handle
+    int compare = white? 0: 1;
+
+    for (int row = 0; row < BOARDWIDTH; row++) {
+        for (int col = 0; col < BOARDWIDTH; col++) {
+            int bitStart = (row * BOARDWIDTH + col) * 3;
+            // If the tile is empty, continue to next loop
+            if (!(this->m_boardBitset.test(bitStart) || this->m_boardBitset.test(bitStart + 1) ||
+                this->m_boardBitset.test(bitStart + 2))) {
+                this->m_tileInfos[row * BOARDWIDTH + col].valid = false;
+                continue;
+            }
+
+            int bit = (row * BOARDWIDTH + col) * 4;
+            for (int i = 0; i < 4; i++) {
+                int edge;
+                if (i == 3) {
+                    edge = this->m_boardBitset[bitStart + this->getRightEdge(bitStart)];
+                } else {
+                    edge = this->m_boardBitset[bitStart + i];
+                }
+
+                if ((this->m_paths[bit + i] != 0) && (edge == compare)) {
+                    int rr = ((this->m_paths[bit + i] - 1) / 4) / BOARDWIDTH;
+                    int cc = ((this->m_paths[bit + i] - 1) / 4) % BOARDWIDTH;
+                    int ii = (this->m_paths[bit + i] - 1) % 4;
+
+                    this->m_tileInfos[row * BOARDWIDTH + col].valid = true;
+                    this->m_tileInfos[row * BOARDWIDTH + col].deltaRow = rr - row;
+                    this->m_tileInfos[row * BOARDWIDTH + col].deltaCol = cc - col;
+                    switch (ii - i) {
+                        case -2:
+                            this->m_tileInfos[row * BOARDWIDTH + col].angle = 2;
+                            break;
+                        case 3:
+                            this->m_tileInfos[row * BOARDWIDTH + col].angle = -1;
+                            break;
+                        case -3:
+                            this->m_tileInfos[row * BOARDWIDTH + col].angle = 1;
+                            break;
+                        default:
+                            this->m_tileInfos[row * BOARDWIDTH + col].angle = ii - i;
+                            break;
+                    }
+                    break;
+                } else {
+                    this->m_tileInfos[row * BOARDWIDTH + col].valid = false;
+                }
+            }
+        }
+    }
+    return this->m_tileInfos;
+}
+
+bool Board::checkValid(int pos) {
+    /* Check if the game is end */
+    if (this->m_winner != 0) {
+        return false;
+    }
+    /* Perform single-tile-update and force play */
+    for (int i = 0; i < 3; i++) {
+        char type;
+        switch (i) {
+            case 0: type = '+'; break;
+            case 1: type = '/'; break;
+            case 2: type = '\\'; break;
+        }
+        this->m_tempBoardBitset = this->m_boardBitset;
+        this->m_tempMaxRow = this->m_maxRow;
+        this->m_tempMaxCol = this->m_maxCol;
+        for (int i = 0; i < ALLDIM; i++) {
+            this->m_tempPaths[i] = this->m_paths[i];
+        }
+        if (this->singleTileUpdate(pos, type)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Board::getValidPos(int* pos, int* cnt) {
+    *cnt = 0;
+    for (int i = 0; i < TILENUM; i++) {
+        if (checkValid(i)) {
+            pos[*cnt] = i;
+            (*cnt)++;
+        }
     }
 }
