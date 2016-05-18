@@ -1359,38 +1359,362 @@ TileInfo* Board::getTileInfos(bool white) {
     return this->m_tileInfos;
 }
 
-bool Board::checkValid(int pos) {
+bool Board::checkValid(int pos, char type) {
     /* Check if the game is end */
     if (this->m_winner != 0) {
         return false;
     }
     /* Perform single-tile-update and force play */
-    for (int i = 0; i < 3; i++) {
-        char type;
-        switch (i) {
-            case 0: type = '+'; break;
-            case 1: type = '/'; break;
-            case 2: type = '\\'; break;
-        }
-        this->m_tempBoardBitset = this->m_boardBitset;
-        this->m_tempMaxRow = this->m_maxRow;
-        this->m_tempMaxCol = this->m_maxCol;
-        for (int i = 0; i < ALLDIM; i++) {
-            this->m_tempPaths[i] = this->m_paths[i];
-        }
-        if (this->singleTileUpdate(pos, type)) {
-            return true;
-        }
+    this->m_tempBoardBitset = this->m_boardBitset;
+    this->m_tempMaxRow = this->m_maxRow;
+    this->m_tempMaxCol = this->m_maxCol;
+    for (int i = 0; i < ALLDIM; i++) {
+        this->m_tempPaths[i] = this->m_paths[i];
     }
+    if (this->singleTileUpdate(pos, type)) {
+        this->m_winner = 0;
+        return true;
+    }
+
+    this->m_winner = 0;
     return false;
 }
 
-void Board::getValidPos(int* pos, int* cnt) {
+void Board::getValidPos(int pos[TILENUM][4], int* cnt) {
     *cnt = 0;
-    for (int i = 0; i < TILENUM; i++) {
-        if (checkValid(i)) {
-            pos[*cnt] = i;
+    for (int tile = 0; tile < TILENUM; tile++) {
+        bool validExist = false;
+        int last = 0;
+        for (int tt = 1; tt <= 3; tt++) {
+            char type;
+            switch (tt) {
+                case 1: type = '+'; break;
+                case 2: type = '/'; break;
+                case 3: type = '\\'; break;
+            }
+            if (checkValid(tile, type)) {
+                if (validExist) {
+                    pos[*cnt][tt] = 1;
+                    last = tt + 1;
+                } else {
+                    pos[*cnt][0] = tile;
+                    // Set invalid type to 0
+                    for (int i = 1; i < tt; i++) {
+                        pos[*cnt][i] = 0;
+                    }
+                    pos[*cnt][tt] = 1;
+                    last = tt + 1;
+                    validExist = true;
+                }
+            }
+        }
+        if (validExist) {
+            // Set invalid type to 0
+            for (int i = last; i < 4; i++) {
+                pos[*cnt][i] = 0;
+            }
             (*cnt)++;
+        }
+    }
+}
+
+void Board::getPathsFromBitset(int paths[ALLDIM]) {
+    // Reset the output
+    for (int i = 0; i < ALLDIM; i++) {
+        paths[i] = 0;
+    }
+
+    for (int row = 0; row < BOARDWIDTH; row++) {
+        for (int col = 0; col < BOARDWIDTH; col++) {
+            int bitStart = (row * BOARDWIDTH + col) * 3;
+            int bit = (row * BOARDWIDTH + col) * 4;
+            // If the tile is empty, continue to next loop
+            if (!(this->m_boardBitset.test(bitStart) || this->m_boardBitset.test(bitStart + 1) ||
+                this->m_boardBitset.test(bitStart + 2))) {
+                continue;
+            }
+            for (int i = 0; i < 4; i++) {
+                // If the path is found, continue to next loop
+                if (paths[bit + i] != 0) {
+                    continue;
+                }
+                // If the neighbouring tile is not empty, continue to next loop
+                switch (i) {
+                    case 0:
+                        if (row >= 1) {
+                            int topBitStart = ((row - 1) * BOARDWIDTH + col) * 3;
+                            if (this->m_boardBitset.test(topBitStart) || this->m_boardBitset.test(topBitStart + 1) ||
+                                this->m_boardBitset.test(topBitStart + 2)) {
+                                continue;
+                            }
+                        }
+                        break;
+                    case 1:
+                        if (col >= 1) {
+                            int leftBitStart = (row * BOARDWIDTH + col - 1) * 3;
+                            if (this->m_boardBitset.test(leftBitStart) || this->m_boardBitset.test(leftBitStart + 1) ||
+                                this->m_boardBitset.test(leftBitStart + 2)) {
+                                continue;
+                            }
+                        }
+                        break;
+                    case 2:
+                        if (row + 1 < BOARDWIDTH) {
+                            int bottomBitStart = ((row + 1) * BOARDWIDTH + col) * 3;
+                            if (this->m_boardBitset.test(bottomBitStart) || this->m_boardBitset.test(bottomBitStart + 1) ||
+                                this->m_boardBitset.test(bottomBitStart + 2)) {
+                                continue;
+                            }
+                        }
+                        break;
+                    case 3:
+                        if (col + 1 < BOARDWIDTH) {
+                            int rightBitStart = (row * BOARDWIDTH + col + 1) * 3;
+                            if (this->m_boardBitset.test(rightBitStart) || this->m_boardBitset.test(rightBitStart + 1) ||
+                                this->m_boardBitset.test(rightBitStart + 2)) {
+                                continue;
+                            }
+                        }
+                        break;
+                }
+
+                int nowRow = row;
+                int nowCol = col;
+                int nowI = i;
+
+                bool finish = false;
+                do {
+                    // Find the other end in the same tile
+                    bool found = false;
+                    bitStart = (nowRow * BOARDWIDTH + nowCol) * 3;
+                    for (int j = nowI + 1; j < 4 && found == false; j++) {
+                        int endOne = (nowI == 3)? this->getRightEdge(bitStart): nowI;
+                        int endTwo = (j == 3)? this->getRightEdge(bitStart): j;
+                        if (this->m_boardBitset[bitStart + endOne] == this->m_boardBitset[bitStart + endTwo]) {
+                            // Check neighbouring tile
+                            switch (j) {
+                                case 0:
+                                    if (nowRow >= 1) {
+                                        int topBitStart = ((nowRow - 1) * BOARDWIDTH + nowCol) * 3;
+                                        if (this->m_boardBitset.test(topBitStart) || this->m_boardBitset.test(topBitStart + 1) ||
+                                            this->m_boardBitset.test(topBitStart + 2)) {
+                                            // Go to next tile
+                                            nowRow = nowRow - 1;
+                                            nowI = 2;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 1:
+                                    if (nowCol >= 1) {
+                                        int leftBitStart = (nowRow * BOARDWIDTH + nowCol - 1) * 3;
+                                        if (this->m_boardBitset.test(leftBitStart) || this->m_boardBitset.test(leftBitStart + 1) ||
+                                            this->m_boardBitset.test(leftBitStart + 2)) {
+                                            // Go to next tile
+                                            nowCol = nowCol - 1;
+                                            nowI = 3;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 2:
+                                    if (nowRow + 1 < BOARDWIDTH) {
+                                        int bottomBitStart = ((nowRow + 1) * BOARDWIDTH + nowCol) * 3;
+                                        if (this->m_boardBitset.test(bottomBitStart) || this->m_boardBitset.test(bottomBitStart + 1) ||
+                                            this->m_boardBitset.test(bottomBitStart + 2)) {
+                                            // Go to next tile
+                                            nowRow = nowRow + 1;
+                                            nowI = 0;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 3:
+                                    if (nowCol + 1 < BOARDWIDTH) {
+                                        int rightBitStart = (nowRow * BOARDWIDTH + nowCol + 1) * 3;
+                                        if (this->m_boardBitset.test(rightBitStart) || this->m_boardBitset.test(rightBitStart + 1) ||
+                                            this->m_boardBitset.test(rightBitStart + 2)) {
+                                            // Go to next tile
+                                            nowCol = nowCol + 1;
+                                            nowI = 1;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                    for (int j = 0; j < nowI && found == false; j++) {
+                        int endOne = (nowI == 3)? this->getRightEdge(bitStart): nowI;
+                        int endTwo = (j == 3)? this->getRightEdge(bitStart): j;
+                        if (this->m_boardBitset[bitStart + endOne] == this->m_boardBitset[bitStart + endTwo]) {
+                            // Check neighbouring tile
+                            switch (j) {
+                                case 0:
+                                    if (nowRow >= 1) {
+                                        int topBitStart = ((nowRow - 1) * BOARDWIDTH + nowCol) * 3;
+                                        if (this->m_boardBitset.test(topBitStart) || this->m_boardBitset.test(topBitStart + 1) ||
+                                            this->m_boardBitset.test(topBitStart + 2)) {
+                                            // Go to next tile
+                                            nowRow = nowRow - 1;
+                                            nowI = j;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 1:
+                                    if (nowCol >= 1) {
+                                        int leftBitStart = (nowRow * BOARDWIDTH + nowCol - 1) * 3;
+                                        if (this->m_boardBitset.test(leftBitStart) || this->m_boardBitset.test(leftBitStart + 1) ||
+                                            this->m_boardBitset.test(leftBitStart + 2)) {
+                                            // Go to next tile
+                                            nowCol = nowCol - 1;
+                                            nowI = j;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 2:
+                                    if (nowRow + 1 < BOARDWIDTH) {
+                                        int bottomBitStart = ((nowRow + 1) * BOARDWIDTH + nowCol) * 3;
+                                        if (this->m_boardBitset.test(bottomBitStart) || this->m_boardBitset.test(bottomBitStart + 1) ||
+                                            this->m_boardBitset.test(bottomBitStart + 2)) {
+                                            // Go to next tile
+                                            nowRow = nowRow + 1;
+                                            nowI = j;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                                case 3:
+                                    if (nowCol + 1 < BOARDWIDTH) {
+                                        int rightBitStart = (nowRow * BOARDWIDTH + nowCol + 1) * 3;
+                                        if (this->m_boardBitset.test(rightBitStart) || this->m_boardBitset.test(rightBitStart + 1) ||
+                                            this->m_boardBitset.test(rightBitStart + 2)) {
+                                            // Go to next tile
+                                            nowCol = nowCol + 1;
+                                            nowI = j;
+                                            found = true;
+                                        } else {
+                                            // Stop and update the path
+                                            int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                            paths[bit + i] = endBit + j + 1;
+                                            paths[endBit + j] = bit + i + 1;
+                                            found = true;
+                                            finish = true;
+                                        }
+                                    } else {
+                                        // Stop and update the path
+                                        int endBit = (nowRow * BOARDWIDTH + nowCol) * 4;
+                                        paths[bit + i] = endBit + j + 1;
+                                        paths[endBit + j] = bit + i + 1;
+                                        found = true;
+                                        finish = true;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                } while(!finish);
+            }
         }
     }
 }
