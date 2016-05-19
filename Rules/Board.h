@@ -23,8 +23,9 @@ public:
     void printBit();
     TileInfo* getTileInfos(bool white);
     bool checkValid(int pos, char type);
-    void getValidPos(int pos[TILENUM][4], int* cnt);
+    void getValidPos(int pos[TILENUM][4], int* posCnt, int* choiceCnt);
     void getPathsFromBitset(int paths[ALLDIM]);
+    bitset<DIM> getBoardBitset();
 private:
     /** member functions **/
     bool forcePlay(int pos);

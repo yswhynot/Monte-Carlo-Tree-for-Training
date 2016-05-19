@@ -2,13 +2,57 @@
 #include "Ann.h"
 
 #include <iostream>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sstream>
+
+#include <sqlite3.h>
+
 using namespace std;
+
+typedef bitset<DIM> STATE;
+
+#define GAMENUM 10000
 
 /** Function prototypes **/
 void testCases();
+bool randomSteps(Board* board, vector<STATE>* states);
+void printStates(vector<STATE> states);
+bool updateDb(sqlite3* db, bool win, vector<STATE> states);
+string bitsetToString(STATE state);
 
 int main() {
-    testCases();
+    srand(time(0));
+    sqlite3* db;
+    int ret = sqlite3_open("trax.db", &db);
+    if (ret != 0) {
+        cout << "Cannot open DB\n";
+    }
+
+    for (int game = 1; game <= GAMENUM && ret == 0; game++) {
+        Board board;
+        vector<STATE> states;
+
+        bool win = randomSteps(&board, &states);
+
+        if (updateDb(db, win, states)) {
+            cout << "Successfully record game " << game << "\n";
+        } else {
+            cout << "Interrupte at game " << game << "\n";
+            break;
+        }
+
+        //printStates(states);
+    }
+
+    sqlite3_close(db);
+
+    //testCases();
+
+    cout << "Press any key to continue...\n";
+    getchar();
     return 0;
 }
 
@@ -25,11 +69,13 @@ void testCases() {
     winner = board.updateBoardByCommands(string("@0+ A0\\ A3/"));
     board.printType();
     int pos[TILENUM][4];
-    int cnt;
-    board.getValidPos(pos, &cnt);
-    for (int i = 0; i < cnt; i++) {
+    int posCnt;
+    int choiceCnt;
+    board.getValidPos(pos, &posCnt, &choiceCnt);
+    for (int i = 0; i < posCnt; i++) {
         cout << pos[i][0] << ": " << (pos[i][1] == 1? "+": "") << (pos[i][2] == 1? "/": "") << (pos[i][3] == 1? "\\": "") << "\n";
     }
+    cout << "Number of possible choices: " << choiceCnt << "\n";
     cout << "\n";
     // Test output TileInfo
     TileInfo* tileInfos;
@@ -70,4 +116,149 @@ void testCases() {
     delete [] yy;
     */
     return;
+}
+
+bool randomSteps(Board* board, vector<STATE>* states) {
+    int winner;
+    do {
+        int pos[TILENUM][4];
+        int posCnt;
+        int choiceCnt;
+        board->getValidPos(pos, &posCnt, &choiceCnt);
+        int choose = rand() % choiceCnt;
+
+        int cCnt = 0;
+        bool next = true;
+        for (int pp = 0; pp < posCnt && next; pp++) {
+            for (int cc = 1; cc <= 3 && next; cc++) {
+                if (pos[pp][cc] == 1) {
+                    if (cCnt == choose) {
+                        char type;
+                        switch (cc) {
+                            case 1: type = '+'; break;
+                            case 2: type = '/'; break;
+                            case 3: type = '\\'; break;
+                        }
+                        board->updateBoard(pos[pp][0], type, &winner);
+                        next = false;
+                    } else {
+                        cCnt++;
+                    }
+                }
+            }
+        }
+        states->push_back(board->getBoardBitset());
+    } while (winner == 0);
+    return (winner == 1)? true: false;
+}
+
+void printStates(vector<STATE> states) {
+    for (int s = 0; s < (states.size()>=10? 10: states.size()); s++) {
+        // Output top line
+        cout << "\n  ";
+        for (int i = 0; i < BOARDWIDTH; i++) {
+            cout << "-";
+        }
+        cout << "\n";
+        // Output tiles
+        for (int row = 0; row < BOARDWIDTH; row++) {
+            cout << "| ";
+            for (int col = 0; col < BOARDWIDTH; col++) {
+                int bitStart = (row * BOARDWIDTH + col) * 3;
+                bitset<3> type;
+                type[2] = states[s][bitStart];
+                type[1] = states[s][bitStart + 1];
+                type[0] = states[s][bitStart + 2];
+
+                switch (type.to_ulong()) {
+                    case 0: cout << " "; break;
+                    case 1: cout << "/"; break;
+                    case 2: cout << "+"; break;
+                    case 3: cout << "\\"; break;
+                    case 4: cout << "\\"; break;
+                    case 5: cout << "+"; break;
+                    case 6: cout << "/"; break;
+                }
+            }
+            cout << " |\n";
+        }
+        // Output bottom line
+        cout << "  ";
+        for (int i = 0; i < BOARDWIDTH; i++) {
+            cout << "-";
+        }
+        cout << "\n";
+    }
+}
+
+bool updateDb(sqlite3* db, bool win, vector<STATE> states) {
+    int ret = sqlite3_exec(db, "BEGIN;", NULL, NULL, NULL);
+    if (ret != 0) {
+        cout << "Wrong executing SQL BEGIN\n";
+        return false;
+    }
+
+    bool normal = true;
+    for (int s = 0; s < states.size() && normal; s++) {
+        // Check if record exist
+        string sql = "SELECT * FROM winning_rate WHERE board = '" + bitsetToString(states[s]) + "';";
+        char** result;
+        int rRow, rCol;
+        int ret = sqlite3_get_table(db, sql.c_str(), &result, &rRow, &rCol, NULL);
+        if (ret != 0) {
+            cout << "Error in searching\n";
+            normal = false;
+            break;
+        }
+
+        if (rRow == 0) {
+            sqlite3_free_table(result);
+            // Insert new data
+            sql = "INSERT INTO winning_rate VALUES ('" + bitsetToString(states[s]) + "'," + (win? "1": "0") + ",1);";
+            int ret = sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL);
+            if (ret != 0) {
+                cout << "Error in insert new record\n";
+                normal = false;
+                break;
+            }
+        } else {
+            // Get old rate
+            int rate = atoi(result[rCol + 1]) + (win? 1: 0);
+            int num = atoi(result[rCol + 2]) + 1;
+            stringstream ssRate;
+            ssRate << rate;
+            stringstream ssNum;
+            ssNum << num;
+            sqlite3_free_table(result);
+            sql = "UPDATE winning_rate SET rate =" + ssRate.str() + ", num =" + ssNum.str() + " WHERE board = '" + bitsetToString(states[s]) + "';";
+            int ret = sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL);
+            if (ret != 0) {
+                cout << "Error in update record\n";
+                normal = false;
+                break;
+            }
+        }
+    }
+    if (normal) {
+        int ret = sqlite3_exec(db, "COMMIT;", NULL, NULL, NULL);
+        if (ret != 0) {
+            cout << "Fail to commit\n";
+        } else {
+            return true;
+        }
+    } else {
+        int ret = sqlite3_exec(db, "ROLLBACK;", NULL, NULL, NULL);
+        if (ret != 0) {
+            cout << "Fail to rollback\n";
+        }
+        return false;
+    }
+}
+
+string bitsetToString(STATE state) {
+    string ret = "";
+    for (int i = 0; i < DIM; i++) {
+        ret += state.test(i)? "1": "0";
+    }
+    return ret;
 }
