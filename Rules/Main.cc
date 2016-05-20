@@ -20,8 +20,10 @@ typedef bitset<DIM> STATE;
 void testCases();
 bool randomSteps(Board* board, vector<STATE>* states);
 void printStates(vector<STATE> states);
+void printState(STATE state);
 bool updateDb(sqlite3* db, bool win, vector<STATE> states);
 string bitsetToString(STATE state);
+bool readDb(sqlite3* db, int num);
 
 int main() {
     srand(time(0));
@@ -31,6 +33,7 @@ int main() {
         cout << "Cannot open DB\n";
     }
 
+    /*
     for (int game = 1; game <= GAMENUM && ret == 0; game++) {
         Board board;
         vector<STATE> states;
@@ -46,6 +49,9 @@ int main() {
 
         //printStates(states);
     }
+    */
+
+    readDb(db, 10);
 
     sqlite3_close(db);
 
@@ -154,41 +160,45 @@ bool randomSteps(Board* board, vector<STATE>* states) {
 
 void printStates(vector<STATE> states) {
     for (int s = 0; s < (states.size()>=10? 10: states.size()); s++) {
-        // Output top line
-        cout << "\n  ";
-        for (int i = 0; i < BOARDWIDTH; i++) {
-            cout << "-";
-        }
-        cout << "\n";
-        // Output tiles
-        for (int row = 0; row < BOARDWIDTH; row++) {
-            cout << "| ";
-            for (int col = 0; col < BOARDWIDTH; col++) {
-                int bitStart = (row * BOARDWIDTH + col) * 3;
-                bitset<3> type;
-                type[2] = states[s][bitStart];
-                type[1] = states[s][bitStart + 1];
-                type[0] = states[s][bitStart + 2];
-
-                switch (type.to_ulong()) {
-                    case 0: cout << " "; break;
-                    case 1: cout << "/"; break;
-                    case 2: cout << "+"; break;
-                    case 3: cout << "\\"; break;
-                    case 4: cout << "\\"; break;
-                    case 5: cout << "+"; break;
-                    case 6: cout << "/"; break;
-                }
-            }
-            cout << " |\n";
-        }
-        // Output bottom line
-        cout << "  ";
-        for (int i = 0; i < BOARDWIDTH; i++) {
-            cout << "-";
-        }
-        cout << "\n";
+        printState(states[s]);
     }
+}
+
+void printState(STATE state) {
+    // Output top line
+    cout << "\n  ";
+    for (int i = 0; i < BOARDWIDTH; i++) {
+        cout << "-";
+    }
+    cout << "\n";
+    // Output tiles
+    for (int row = 0; row < BOARDWIDTH; row++) {
+        cout << "| ";
+        for (int col = 0; col < BOARDWIDTH; col++) {
+            int bitStart = (row * BOARDWIDTH + col) * 3;
+            bitset<3> type;
+            type[2] = state[bitStart];
+            type[1] = state[bitStart + 1];
+            type[0] = state[bitStart + 2];
+
+            switch (type.to_ulong()) {
+                case 0: cout << " "; break;
+                case 1: cout << "/"; break;
+                case 2: cout << "+"; break;
+                case 3: cout << "\\"; break;
+                case 4: cout << "\\"; break;
+                case 5: cout << "+"; break;
+                case 6: cout << "/"; break;
+            }
+        }
+        cout << " |\n";
+    }
+    // Output bottom line
+    cout << "  ";
+    for (int i = 0; i < BOARDWIDTH; i++) {
+        cout << "-";
+    }
+    cout << "\n";
 }
 
 bool updateDb(sqlite3* db, bool win, vector<STATE> states) {
@@ -261,4 +271,41 @@ string bitsetToString(STATE state) {
         ret += state.test(i)? "1": "0";
     }
     return ret;
+}
+
+bool readDb(sqlite3* db, int num) {
+    string sql = "SELECT * FROM winning_rate ORDER BY num DESC, rate DESC;";
+    char** result;
+    int rRow, rCol;
+    int ret = sqlite3_get_table(db, sql.c_str(), &result, &rRow, &rCol, NULL);
+    if (ret != 0) {
+        cout << "Error in getting data from database\n";
+        return false;
+    }
+
+    if (rRow == 0) {
+        sqlite3_free_table(result);
+        cout << "No result found\n";
+        return true;
+    } else {
+        num = (num > rRow)? rRow: num;
+        for (int r = 1; r < num; r++) {
+            // Handle bitset
+            STATE s;
+            for (int bit = 0; bit < DIM; bit++) {
+                if ((result[r * rCol][bit] - '0') == 0) {
+                    s.reset(bit);
+                } else {
+                    s.set(bit);
+                }
+            }
+            printState(s);
+            // Handle data
+            int rate = atoi(result[r * rCol + 1]);
+            int rNum = atoi(result[r * rCol + 2]);
+            double wRate = (double) rate / rNum;
+            cout << "Winning number: " << rate << ", total number: " << rNum << "\n";
+            printf("Winning rate: %.2f\n", wRate);
+        }
+    }
 }
