@@ -26,10 +26,12 @@ public:
     void getValidPos(int pos[TILENUM][4], int* posCnt, int* choiceCnt);
     void getPathsFromBitset(int paths[ALLDIM]);
     bitset<DIM> getBoardBitset();
+    void saveCmd(int pos, char type);
+    vector<string> getCmds();
 private:
     /** member functions **/
     bool forcePlay(int pos);
-    bool checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag);
+    void checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag);
     bool singleTileUpdate(int pos, char type);
     void shiftTempBoardBitset(int pos);
     int getRightEdge(int bitStart);
@@ -45,6 +47,7 @@ private:
     int m_paths[ALLDIM]; // Store bit ID plus 1
     int m_tempPaths[ALLDIM];
     TileInfo m_tileInfos[TILENUM];
+    vector<string> m_cmds;
 };
 
 #endif /* BOARD_H_ */

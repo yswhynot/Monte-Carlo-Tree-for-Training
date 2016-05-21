@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <sstream>
 using namespace std;
 
 Board::Board() {
@@ -18,6 +19,8 @@ void Board::reset() {
     for (int i = 0; i < BOARDWIDTH * BOARDWIDTH * 4; i++) {
         this->m_paths[i] = 0;
     }
+    // Reset store cmds
+    this->m_cmds.clear();
 }
 
 int Board::updateBoardByCommands(string cmds) {
@@ -92,6 +95,7 @@ bool Board::updateBoard(int pos, char type, int* winner) {
         for (int i = 0; i < ALLDIM; i++) {
             this->m_paths[i] = this->m_tempPaths[i];
         }
+        this->saveCmd(pos, type); // Save the command
         *winner = this->m_winner; // Output winner
         return true;
     } else {
@@ -211,9 +215,10 @@ bool Board::singleTileUpdate(int pos, char type) {
     }
     /* Check if the type is valid */
     switch (type) {
-        case '+':
-            if ((whiteBits[0] != whiteBits[2]) && (whiteBits[1] != whiteBits[3]) &&
-                (redBits[0] != redBits[2]) && (redBits[1] != redBits[3])) {
+        case '+': {
+            bool testTopBottom = topFlag && bottomFlag && ((whiteBits[0] != whiteBits[2]) || (redBits[0] != redBits[2]));
+            bool testLeftRight = leftFlag && rightFlag && ((whiteBits[1] != whiteBits[3]) || (redBits[1] != redBits[3]));
+            if (testTopBottom || testLeftRight) {
                 return false;
             } else {
                 for (int edge = 0; edge < 4; edge++) {
@@ -456,9 +461,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                 }
             }
             break;
-        case '\\':
-            if ((whiteBits[0] != whiteBits[3]) && (whiteBits[1] != whiteBits[2]) &&
-                (redBits[0] != redBits[3]) && (redBits[1] != redBits[2])) {
+        }
+        case '\\': {
+            bool testTopRight = topFlag && rightFlag && ((whiteBits[0] != whiteBits[3]) || (redBits[0] != redBits[3]));
+            bool testLeftBottom = leftFlag && bottomFlag && ((whiteBits[1] != whiteBits[2]) || (redBits[1] != redBits[2]));
+            if (testTopRight || testLeftBottom) {
                 return false;
             } else {
                 for (int edge = 0; edge < 4; edge++) {
@@ -701,9 +708,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                 }
             }
             break;
-        case '/':
-            if ((whiteBits[0] != whiteBits[1]) && (whiteBits[2] != whiteBits[3]) &&
-                (redBits[0] != redBits[1]) && (redBits[2] != redBits[3])) {
+        }
+        case '/': {
+            bool testTopLeft = topFlag && leftFlag && ((whiteBits[0] != whiteBits[1]) || (redBits[0] != redBits[1]));
+            bool testBottomRight = bottomFlag && rightFlag && ((whiteBits[2] != whiteBits[3]) || (redBits[2] != redBits[3]));
+            if (testTopLeft || testBottomRight) {
                 return false;
             } else {
                 for (int edge = 0; edge < 4; edge++) {
@@ -946,6 +955,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                 }
             }
             break;
+        }
         default: return false;
     }
     // Check force play
@@ -1150,7 +1160,7 @@ bool Board::forcePlay(int pos) {
     return true;
 }
 
-bool Board::checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag) {
+void Board::checkFourNeighbours(int row, int col, bool* topFlag, bool* leftFlag, bool* bottomFlag, bool* rightFlag) {
     // Check top
     if (row >= 1) {
         int bitStart = ((row - 1) * BOARDWIDTH + col) * 3;
@@ -1729,4 +1739,33 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
 
 bitset<DIM> Board::getBoardBitset() {
     return this->m_boardBitset;
+}
+
+void Board::saveCmd(int pos, char type) {
+    int row = pos / BOARDWIDTH;
+    int col = pos % BOARDWIDTH;
+
+    string ret = "";
+
+    // Handle row
+    if (row == 0) {
+        ret += '@';
+    } else {
+        do {
+            ret += (row % 26 - 1 + 'A');
+            row -= 26;
+        } while (row >= 0);
+    }
+    // Handle col
+    stringstream ss;
+    ss << col;
+    ret += ss.str();
+    // Handle type
+    ret += type;
+
+    this->m_cmds.push_back(ret);
+}
+
+vector<string> Board::getCmds() {
+    return this->m_cmds;
 }

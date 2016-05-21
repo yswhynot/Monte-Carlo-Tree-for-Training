@@ -7,23 +7,22 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sstream>
-
 #include <sqlite3.h>
-
+#include <fstream>
 using namespace std;
 
 typedef bitset<DIM> STATE;
 
-#define GAMENUM 10000
-
 /** Function prototypes **/
-void testCases();
+void playGames(sqlite3* db, int nGame);
 bool randomSteps(Board* board, vector<STATE>* states);
-void printStates(vector<STATE> states);
-void printState(STATE state);
 bool updateDb(sqlite3* db, bool win, vector<STATE> states);
 string bitsetToString(STATE state);
+void printStates(vector<STATE> states);
+void printState(STATE state);
 bool readDb(sqlite3* db, int num);
+bool writeTrx(Board board, string filename);
+void testCases();
 
 int main() {
     srand(time(0));
@@ -31,10 +30,24 @@ int main() {
     int ret = sqlite3_open("trax.db", &db);
     if (ret != 0) {
         cout << "Cannot open DB\n";
+        return 0;
     }
 
-    /*
-    for (int game = 1; game <= GAMENUM && ret == 0; game++) {
+    playGames(db, 100);
+
+    //readDb(db, 30);
+
+    sqlite3_close(db);
+
+    //testCases();
+
+    cout << "Press ENTER to continue...\n";
+    getchar();
+    return 0;
+}
+
+void playGames(sqlite3* db, int nGame) {
+    for (int game = 1; game <= nGame; game++) {
         Board board;
         vector<STATE> states;
 
@@ -42,6 +55,12 @@ int main() {
 
         if (updateDb(db, win, states)) {
             cout << "Successfully record game " << game << "\n";
+            // Write trx
+            stringstream ss;
+            ss << "./game/" << game << ".trx";
+            if (writeTrx(board, ss.str())) {
+                cout << "Successfully create " << game << ".trx\n";
+            }
         } else {
             cout << "Interrupte at game " << game << "\n";
             break;
@@ -49,79 +68,6 @@ int main() {
 
         //printStates(states);
     }
-    */
-
-    readDb(db, 10);
-
-    sqlite3_close(db);
-
-    //testCases();
-
-    cout << "Press any key to continue...\n";
-    getchar();
-    return 0;
-}
-
-void testCases() {
-    /** Testing for Board **/
-    Board board;
-    // Test update and print
-    int winner;
-    winner = board.updateBoardByCommands(string("@0+ A0\\ A3/ @2\\ @2\\ A1\\ D2\\ E2\\ D1+ B4+ B5\\ @3/ @1+ H1\\ F0/ I1\\ @4/ C5/ C6/ C7/ @3\\ A2\\ A1+ @3+ G0+ E1+ D1+ D0\\ F10+ H9/ C8+ A8+ @6\\ F11+ F12/ E11/ D11/ D12/ B3+ B2\\ A2\\ @5/ @8+ B9/ B10+ F0/ I2/ @8/ M2/ N2/ K1/"));
-    board.printType();
-    cout << "Player "<< winner << " wins the game.\n";
-    // Test check valid positions
-    board.reset();
-    winner = board.updateBoardByCommands(string("@0+ A0\\ A3/"));
-    board.printType();
-    int pos[TILENUM][4];
-    int posCnt;
-    int choiceCnt;
-    board.getValidPos(pos, &posCnt, &choiceCnt);
-    for (int i = 0; i < posCnt; i++) {
-        cout << pos[i][0] << ": " << (pos[i][1] == 1? "+": "") << (pos[i][2] == 1? "/": "") << (pos[i][3] == 1? "\\": "") << "\n";
-    }
-    cout << "Number of possible choices: " << choiceCnt << "\n";
-    cout << "\n";
-    // Test output TileInfo
-    TileInfo* tileInfos;
-    tileInfos = board.getTileInfos(true);
-    for (int i = 0; i < TILENUM; i++) {
-        if (tileInfos[i].valid) {
-            cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
-        }
-    }
-    cout << "\n";
-    tileInfos = board.getTileInfos(false);
-    for (int i = 0; i < TILENUM; i++) {
-        if (tileInfos[i].valid) {
-            cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
-        }
-    }
-    // Test getPathsFromBitset()
-    int paths[ALLDIM];
-    board.getPathsFromBitset(paths);
-    /** Testing for Ann **/
-    /*
-    int x[7][3] = {{0,0,0},{0,0,1},{0,1,0},{0,1,1},{1,0,0},{1,0,1},{1,1,0}};
-    int y[7][3] = {{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0}};
-
-    int** xx = new int*[7];
-    int** yy = new int*[7];
-
-    for (int i = 0; i < 7; i++) {
-        xx[i] = x[i];
-        yy[i] = y[i];
-    }
-
-    Ann ann(3);
-    ann.training(xx, yy, 7);
-    ann.print();
-
-    delete [] xx;
-    delete [] yy;
-    */
-    return;
 }
 
 bool randomSteps(Board* board, vector<STATE>* states) {
@@ -290,6 +236,7 @@ bool readDb(sqlite3* db, int num) {
     } else {
         num = (num > rRow)? rRow: num;
         for (int r = 1; r < num; r++) {
+            cout << "Pattern " << r << ":\n";
             // Handle bitset
             STATE s;
             for (int bit = 0; bit < DIM; bit++) {
@@ -308,4 +255,82 @@ bool readDb(sqlite3* db, int num) {
             printf("Winning rate: %.2f\n", wRate);
         }
     }
+}
+
+bool writeTrx(Board board, string filename) {
+    ofstream ff(filename.c_str());
+    if (!ff) {
+        cout << "Cannot create " << filename << endl;
+        return false;
+    }
+    ff << "Trax" << endl;
+    ff << "Write vs Red" << endl;
+    vector<string> cmds = board.getCmds();
+    for (int i = 0; i < cmds.size(); i ++) {
+        ff << cmds[i] << " ";
+    }
+    ff.close();
+    return true;
+}
+
+void testCases() {
+    /** Testing for Board **/
+    Board board;
+    // Test update and print
+    int winner;
+    winner = board.updateBoardByCommands(string("@0+ B1\\ B0+ B0/ @3\\ A2\\ C4+ D1/ D0+ B6/ B0\\ D1+ C7+ A7/ E1+ C0\\ @4\\ C9+ C10\\ A6\\ E8+ C1+ D0\\ C0\\ D1/ D0+ B13+ @9/ B6\\ F1+ E0/ F0\\ E16+ G5\\ D3\\ G3+ C1\\ G13/ C4/"));
+    board.printType();
+    cout << "Player "<< winner << " wins the game.\n";
+    // Test check valid positions
+    board.reset();
+    winner = board.updateBoardByCommands(string("@0+ A0\\ A3/"));
+    board.printType();
+    int pos[TILENUM][4];
+    int posCnt;
+    int choiceCnt;
+    board.getValidPos(pos, &posCnt, &choiceCnt);
+    for (int i = 0; i < posCnt; i++) {
+        cout << pos[i][0] << ": " << (pos[i][1] == 1? "+": "") << (pos[i][2] == 1? "/": "") << (pos[i][3] == 1? "\\": "") << "\n";
+    }
+    cout << "Number of possible choices: " << choiceCnt << "\n";
+    cout << "\n";
+    // Test output TileInfo
+    TileInfo* tileInfos;
+    tileInfos = board.getTileInfos(true);
+    for (int i = 0; i < TILENUM; i++) {
+        if (tileInfos[i].valid) {
+            cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
+        }
+    }
+    cout << "\n";
+    tileInfos = board.getTileInfos(false);
+    for (int i = 0; i < TILENUM; i++) {
+        if (tileInfos[i].valid) {
+            cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
+        }
+    }
+    // Test getPathsFromBitset()
+    int paths[ALLDIM];
+    board.getPathsFromBitset(paths);
+    /** Testing for Ann **/
+    /*
+    int x[7][3] = {{0,0,0},{0,0,1},{0,1,0},{0,1,1},{1,0,0},{1,0,1},{1,1,0}};
+    int y[7][3] = {{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0}};
+
+    int** xx = new int*[7];
+    int** yy = new int*[7];
+
+    for (int i = 0; i < 7; i++) {
+        xx[i] = x[i];
+        yy[i] = y[i];
+    }
+
+    Ann ann(3);
+    ann.training(xx, yy, 7);
+    ann.print();
+
+    delete [] xx;
+    delete [] yy;
+    */
+    return;
 }
