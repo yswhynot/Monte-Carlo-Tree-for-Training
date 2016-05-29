@@ -1751,19 +1751,20 @@ void Board::saveCmd(int pos, char type) {
 
     string ret = "";
 
+	// Handle col
+	if (col == 0) {
+		ret += '@';
+	}
+	else {
+		do {
+			ret += (col % 26 - 1 + 'A');
+			col -= 26;
+		} while (col >= 0);
+	}
     // Handle row
-    if (row == 0) {
-        ret += '@';
-    } else {
-        do {
-            ret += (row % 26 - 1 + 'A');
-            row -= 26;
-        } while (row >= 0);
-    }
-    // Handle col
-    stringstream ss;
-    ss << col;
-    ret += ss.str();
+	stringstream ss;
+	ss << row;
+	ret += ss.str();
     // Handle type
     ret += type;
 

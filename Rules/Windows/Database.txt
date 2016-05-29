@@ -1,0 +1,2 @@
+create table winning_rate(board text primary key, rate int not null, num int not null);
+delete from winning_rate;

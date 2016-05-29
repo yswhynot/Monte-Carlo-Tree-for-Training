@@ -15,9 +15,13 @@ using namespace System;
 using namespace System::Data::SQLite;
 
 typedef bitset<DIM> STATE;
+#define TRIAL 5
 
 /** Function prototypes **/
-void playGames(SQLiteConnection^ db, int nGame);
+void playWithAI(SQLiteConnection^ db, int nGame);
+void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex);
+void playRandom(SQLiteConnection^ db, int nGame);
+string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
 bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states);
 string bitsetToString(STATE state);
@@ -32,15 +36,15 @@ int main() {
 	SQLiteConnection^ db = gcnew SQLiteConnection();
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
+	
+	playWithAI(db, 1000);
 
-    //playGames(db, 100);
+    //playRandom(db, 1);
 
-    readDb(db, 10);
+    //readDb(db, 10);
 
 	db->Close();
 	delete (IDisposable^)db;
-
-	PortChat::Main();
 
     //testCases();
 
@@ -49,7 +53,131 @@ int main() {
     return 0;
 }
 
-void playGames(SQLiteConnection^ db, int nGame) {
+void playWithAI(SQLiteConnection^ db, int nGame) {
+	PortChat portChat;
+
+	String^ msg;
+	for (int game = 1; game <= nGame; game++) {
+		Board board;
+		vector<STATE> states;
+		int winner;
+
+		// Handle initial message for color
+		if (game == 1) {
+			bool hasRead = false;
+			do {
+				std::cout << "Waiting for initial command...\n";
+				msg = portChat.Read(&hasRead);
+			} while (hasRead == false);
+		}
+		// If white, do the first step
+		if (msg->Equals("-W")) {
+			string cmd = randomStep(&board, &states, &winner);
+			portChat.Write(gcnew String(cmd.c_str()));
+		}
+		else if (!msg->Equals("-B")) {
+			std::cout << "Interrupte at game " << game << "\n";
+			return;
+		}
+		// Ordinary Procedures
+		bool handle = false;
+		do {
+			// Listen to the command
+			bool hasRead = false;
+			int trialCnt = 0;
+			do {
+				msg = portChat.Read(&hasRead);
+				// Trial update
+				trialCnt++;
+				if (trialCnt >= TRIAL) {
+					std::cout << "Interrupte at game " << game << "\n";
+					return;
+				}
+			} while (hasRead == false);
+			// If the last game is end, interrupt
+			if (msg->Equals("-W") || msg->Equals("-B")) {
+				checkAllWinLose(db, &board, &states, game);
+				handle = true;
+				break;
+			}
+			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
+			board.updateBoardByCommand(string(msgChr), &winner);
+			states.push_back(board.getBoardBitset());
+
+			if (winner != 0) {
+				break;
+			}
+			// Make response
+			string cmd = randomStep(&board, &states, &winner);
+
+			if (winner == 0) {
+				portChat.Write(gcnew String(cmd.c_str()));
+			}
+		} while (winner == 0);
+
+		// If the game is end, continue
+		if (handle) continue;
+
+		// Update database
+		if (updateDb(db, (winner == 1) ? true : false, states)) {
+			std::cout << "Successfully record game " << game << "\n";
+			// Write trx
+			stringstream ss;
+			ss << "./game/" << game << ".trx";
+			if (writeTrx(board, ss.str())) {
+				std::cout << "Successfully create " << game << ".trx\n";
+				continue;
+			}
+		}
+		else {
+			std::cout << "Interrupte at game " << game << "\n";
+			return;
+		}
+	}
+}
+
+
+void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex) {
+	int pos[TILENUM][4];
+	int posCnt;
+	int choiceCnt;
+	board->getValidPos(pos, &posCnt, &choiceCnt);
+
+	int endIndex = 1;
+
+	for (int pp = 0; pp < posCnt; pp++) {
+		for (int cc = 1; cc <= 3; cc++) {
+			if (pos[pp][cc] == 1) {
+				char type;
+				switch (cc) {
+				case 1: type = '+'; break;
+				case 2: type = '/'; break;
+				case 3: type = '\\'; break;
+				}
+				// Backup board and states
+				Board tempBoard = *board;
+				int winner;
+				tempBoard.updateBoard(pos[pp][0], type, &winner);
+				if (winner != 0) {
+					vector<STATE> tempStates = *states;
+					tempStates.push_back(tempBoard.getBoardBitset());
+					if (updateDb(db, (winner == 1) ? true : false, tempStates)) {
+						std::cout << "Successfully record game " << gameIndex << ", possible ending " << endIndex << "\n";
+						// Write trx
+						stringstream ss;
+						ss << "./game/" << gameIndex << "_" << endIndex << ".trx";
+						if (writeTrx(tempBoard, ss.str())) {
+							std::cout << "Successfully create " << gameIndex << "_" << endIndex << ".trx\n";
+						}
+						endIndex++;
+					}
+				}
+			}
+		}
+	}
+}
+
+void playRandom(SQLiteConnection^ db, int nGame) {
     for (int game = 1; game <= nGame; game++) {
         Board board;
         vector<STATE> states;
@@ -73,36 +201,42 @@ void playGames(SQLiteConnection^ db, int nGame) {
     }
 }
 
+string randomStep(Board* board, vector<STATE>* states, int* winner) {
+	int pos[TILENUM][4];
+	int posCnt;
+	int choiceCnt;
+	board->getValidPos(pos, &posCnt, &choiceCnt);
+	int choose = rand() % choiceCnt;
+
+	int cCnt = 0;
+	bool next = true;
+	for (int pp = 0; pp < posCnt && next; pp++) {
+		for (int cc = 1; cc <= 3 && next; cc++) {
+			if (pos[pp][cc] == 1) {
+				if (cCnt == choose) {
+					char type;
+					switch (cc) {
+					case 1: type = '+'; break;
+					case 2: type = '/'; break;
+					case 3: type = '\\'; break;
+					}
+					board->updateBoard(pos[pp][0], type, winner);
+					next = false;
+				}
+				else {
+					cCnt++;
+				}
+			}
+		}
+	}
+	states->push_back(board->getBoardBitset());
+	return board->getCmds().back();
+}
+
 bool randomSteps(Board* board, vector<STATE>* states) {
     int winner;
     do {
-        int pos[TILENUM][4];
-        int posCnt;
-        int choiceCnt;
-        board->getValidPos(pos, &posCnt, &choiceCnt);
-        int choose = rand() % choiceCnt;
-
-        int cCnt = 0;
-        bool next = true;
-        for (int pp = 0; pp < posCnt && next; pp++) {
-            for (int cc = 1; cc <= 3 && next; cc++) {
-                if (pos[pp][cc] == 1) {
-                    if (cCnt == choose) {
-                        char type;
-                        switch (cc) {
-                            case 1: type = '+'; break;
-                            case 2: type = '/'; break;
-                            case 3: type = '\\'; break;
-                        }
-                        board->updateBoard(pos[pp][0], type, &winner);
-                        next = false;
-                    } else {
-                        cCnt++;
-                    }
-                }
-            }
-        }
-        states->push_back(board->getBoardBitset());
+		randomStep(board, states, &winner);
     } while (winner == 0);
     return (winner == 1)? true: false;
 }
@@ -165,6 +299,9 @@ bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states) {
 				reader->Read();
 				int rate = reader->GetInt32(1) + (win ? 1 : 0);
 				int num = reader->GetInt32(2) + 1;
+				// Finish reading
+				reader->Close();
+
 				stringstream ssRate;
 				ssRate << rate;
 				stringstream ssNum;
@@ -174,13 +311,13 @@ bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states) {
 				cmd->ExecuteNonQuery();
 			}
 			else {
+				// Finish reading
+				reader->Close();
 				// Insert new data
 				sql = "INSERT INTO winning_rate VALUES ('" + bitsetToString(states[s]) + "'," + (win ? "1" : "0") + ",1);";
 				cmd->CommandText = gcnew String(sql.c_str());
 				cmd->ExecuteNonQuery();
 			}
-			String^ x = reader->GetString(0);
-			int a = 0;
 		}
 		tx->Commit();
 		return true;
@@ -231,8 +368,12 @@ bool readDb(SQLiteConnection^ db, int num) {
 			// Update counter
 			cnt++;
 		}
+		// Finish reading
+		reader->Close();
 	}
 	else {
+		// Finish reading
+		reader->Close();
 		std::cout << "No result found\n";
 	}
 	return true;
@@ -245,7 +386,7 @@ bool writeTrx(Board board, string filename) {
         return false;
     }
     ff << "Trax" << endl;
-    ff << "Write vs Red" << endl;
+    ff << "White vs Red" << endl;
     vector<string> cmds = board.getCmds();
     for (int i = 0; i < cmds.size(); i ++) {
         ff << cmds[i] << " ";
@@ -259,12 +400,18 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0+ B1\\ B0+ B0/ @3\\ A2\\ C4+ D1/ D0+ B6/ B0\\ D1+ C7+ A7/ E1+ C0\\ @4\\ C9+ C10\\ A6\\ E8+ C1+ D0\\ C0\\ D1/ D0+ B13+ @9/ B6\\ F1+ E0/ F0\\ E16+ G5\\ D3\\ G3+ C1\\ G13/ C4/"));
+    winner = board.updateBoardByCommands(string("@0+ @1+ @1+ D1+ C2\\ C0\\ B3+ E2+ D3\\"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
+	// Test command list
+	vector<string> cmds = board.getCmds();
+	for (int t = 0; t < cmds.size(); t++) {
+		std::cout << cmds[t] << " ";
+	}
+	std::cout << endl;
     // Test check valid positions
     board.reset();
-    winner = board.updateBoardByCommands(string("@0+ A0\\ A3/"));
+    winner = board.updateBoardByCommands(string("@0+ @1+ @1+ D1+ C2\\ C0\\ B3+ E2+ D3\\"));
     board.printType();
     int pos[TILENUM][4];
     int posCnt;
