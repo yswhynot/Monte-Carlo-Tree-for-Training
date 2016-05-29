@@ -8,6 +8,8 @@
 #include <sstream>
 #include <fstream>
 
+#include "PortChat.cpp"
+
 using namespace std;
 using namespace System;
 using namespace System::Data::SQLite;
@@ -37,6 +39,8 @@ int main() {
 
 	db->Close();
 	delete (IDisposable^)db;
+
+	PortChat::Main();
 
     //testCases();
 
