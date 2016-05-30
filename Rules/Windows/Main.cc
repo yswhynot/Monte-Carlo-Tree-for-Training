@@ -124,6 +124,9 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 			}
 		} while (winner == 0);
 
+		// If the game is handled, continue
+		if (handle) continue;
+
 		/** Update database **/
 		if (updateDb(db, (winner == 1) ? true : false, states)) {
 			std::cout << "Successfully record game " << game << "\n";
