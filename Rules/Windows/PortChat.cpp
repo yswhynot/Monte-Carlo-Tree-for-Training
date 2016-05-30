@@ -11,13 +11,19 @@ private:
 	static SerialPort^ _serialPort;
 
 public:
-	PortChat()
+	PortChat(String^ portName)
 	{
 		// Create a new SerialPort object with default settings.
 		_serialPort = gcnew SerialPort();
 
 		// Allow the user to set the appropriate properties.
-		_serialPort->PortName = SetPortName(_serialPort->PortName);
+		if (String::IsNullOrEmpty(portName)) {
+			_serialPort->PortName = SetPortName(_serialPort->PortName);
+		}
+		else {
+			_serialPort->PortName = portName;
+		}
+		
 		_serialPort->BaudRate = 19200;
 
 		// Set read timeout

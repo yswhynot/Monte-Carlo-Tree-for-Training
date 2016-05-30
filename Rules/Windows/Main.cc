@@ -18,8 +18,8 @@ typedef bitset<DIM> STATE;
 #define TRIAL 5
 
 /** Function prototypes **/
-void playWithAI(SQLiteConnection^ db, int nGame);
-void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex);
+void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
+void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
 void playRandom(SQLiteConnection^ db, int nGame);
 string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
@@ -37,7 +37,7 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	playWithAI(db, 1000);
+	playWithAI(db, 100, "COM18");
 
     //playRandom(db, 1);
 
@@ -53,33 +53,40 @@ int main() {
     return 0;
 }
 
-void playWithAI(SQLiteConnection^ db, int nGame) {
-	PortChat portChat;
+void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
+	PortChat portChat(portName);
 
 	String^ msg;
+	bool AIWhite = true; // The AI color is different form the command -W (false) and -B (true)
+	bool waitForInit = false;
 	for (int game = 1; game <= nGame; game++) {
 		Board board;
 		vector<STATE> states;
 		int winner;
-
-		// Handle initial message for color
-		if (game == 1) {
+		
+		/** Handle initial message for color **/
+		if (game == 1 || waitForInit) {
+			// Listen to port
 			bool hasRead = false;
 			do {
-				std::cout << "Waiting for initial command...\n";
+				if (!waitForInit) std::cout << "Waiting for initial command...\n";
 				msg = portChat.Read(&hasRead);
 			} while (hasRead == false);
+			// Clear flag
+			waitForInit = false;
 		}
 		// If white, do the first step
 		if (msg->Equals("-W")) {
 			string cmd = randomStep(&board, &states, &winner);
 			portChat.Write(gcnew String(cmd.c_str()));
+			// Update AI color
+			AIWhite = false;
 		}
 		else if (!msg->Equals("-B")) {
 			std::cout << "Interrupte at game " << game << "\n";
 			return;
 		}
-		// Ordinary Procedures
+		/** Ordinary Procedures **/
 		bool handle = false;
 		do {
 			// Listen to the command
@@ -96,29 +103,30 @@ void playWithAI(SQLiteConnection^ db, int nGame) {
 			} while (hasRead == false);
 			// If the last game is end, interrupt
 			if (msg->Equals("-W") || msg->Equals("-B")) {
-				checkAllWinLose(db, &board, &states, game);
+				checkAllWinLose(db, &board, &states, game, AIWhite);
 				handle = true;
-				break;
+				// Update AI color
+				AIWhite = !msg->Equals("-W");
+				break; /* do */
 			}
+			// Else, game not end
 			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
 			board.updateBoardByCommand(string(msgChr), &winner);
 			states.push_back(board.getBoardBitset());
-
-			if (winner != 0) {
-				break;
-			}
 			// Make response
 			string cmd = randomStep(&board, &states, &winner);
+			portChat.Write(gcnew String(cmd.c_str()));
 
-			if (winner == 0) {
-				portChat.Write(gcnew String(cmd.c_str()));
+			if (winner != 0) {
+				waitForInit = true;
+				break;
 			}
 		} while (winner == 0);
 
 		// If the game is end, continue
 		if (handle) continue;
 
-		// Update database
+		/** Update database **/
 		if (updateDb(db, (winner == 1) ? true : false, states)) {
 			std::cout << "Successfully record game " << game << "\n";
 			// Write trx
@@ -137,7 +145,7 @@ void playWithAI(SQLiteConnection^ db, int nGame) {
 }
 
 
-void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex) {
+void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite) {
 	int pos[TILENUM][4];
 	int posCnt;
 	int choiceCnt;
@@ -158,7 +166,7 @@ void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, 
 				Board tempBoard = *board;
 				int winner;
 				tempBoard.updateBoard(pos[pp][0], type, &winner);
-				if (winner != 0) {
+				if (winner == (AIWhite? 1: 2)) {
 					vector<STATE> tempStates = *states;
 					tempStates.push_back(tempBoard.getBoardBitset());
 					if (updateDb(db, (winner == 1) ? true : false, tempStates)) {
@@ -400,7 +408,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0+ @1+ @1+ D1+ C2\\ C0\\ B3+ E2+ D3\\"));
+    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list
@@ -411,7 +419,7 @@ void testCases() {
 	std::cout << endl;
     // Test check valid positions
     board.reset();
-    winner = board.updateBoardByCommands(string("@0+ @1+ @1+ D1+ C2\\ C0\\ B3+ E2+ D3\\"));
+    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
     board.printType();
     int pos[TILENUM][4];
     int posCnt;
