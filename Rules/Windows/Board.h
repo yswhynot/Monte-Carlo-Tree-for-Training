@@ -28,6 +28,7 @@ public:
     bitset<DIM> getBoardBitset();
     void saveCmd(int pos, char type);
     vector<string> getCmds();
+	void bitsetToImage(unsigned char* imageWhite, unsigned char* imageRed);
 private:
     /** member functions **/
     bool forcePlay(int pos);

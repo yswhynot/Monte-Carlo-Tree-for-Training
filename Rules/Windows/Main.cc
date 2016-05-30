@@ -37,7 +37,7 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	playWithAI(db, 100, "COM18");
+	//playWithAI(db, 100, "COM18");
 
     //playRandom(db, 1);
 
@@ -46,7 +46,7 @@ int main() {
 	db->Close();
 	delete (IDisposable^)db;
 
-    //testCases();
+    testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -435,14 +435,14 @@ void testCases() {
     tileInfos = board.getTileInfos(true);
     for (int i = 0; i < TILENUM; i++) {
         if (tileInfos[i].valid) {
-            std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
+            std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << " " << tileInfos[i].attack << "\n";
         }
     }
     std::cout << "\n";
     tileInfos = board.getTileInfos(false);
     for (int i = 0; i < TILENUM; i++) {
         if (tileInfos[i].valid) {
-            std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << "\n";
+			std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << " " << tileInfos[i].attack << "\n";
         }
     }
     // Test getPathsFromBitset()

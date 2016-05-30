@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include <math.h>
 using namespace std;
 
 Board::Board() {
@@ -1349,6 +1350,9 @@ TileInfo* Board::getTileInfos(bool white) {
                     int ii = (this->m_paths[bit + i] - 1) % 4;
 
                     this->m_tileInfos[row * BOARDWIDTH + col].valid = true;
+					this->m_tileInfos[row * BOARDWIDTH + col].white = white;
+					this->m_tileInfos[row * BOARDWIDTH + col].pos1 = row * BOARDWIDTH + col;
+					this->m_tileInfos[row * BOARDWIDTH + col].pos2 = rr * BOARDWIDTH + cc;
                     this->m_tileInfos[row * BOARDWIDTH + col].deltaRow = rr - row;
                     this->m_tileInfos[row * BOARDWIDTH + col].deltaCol = cc - col;
                     switch (ii - i) {
@@ -1365,6 +1369,42 @@ TileInfo* Board::getTileInfos(bool white) {
                             this->m_tileInfos[row * BOARDWIDTH + col].angle = ii - i;
                             break;
                     }
+					/** Use current information to judge attack **/
+					this->m_tileInfos[row * BOARDWIDTH + col].attack = false;
+					// Flat narrow attack
+					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 0) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 0 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1) ||
+							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 1 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 0)) {
+							this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+						}
+					}
+					// Flat wide attack
+					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 0) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 0 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 2) ||
+							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 2 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 0)) {
+							this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+						}
+					}
+					// Narrow attack variation
+					if (abs(this->m_tileInfos[row * BOARDWIDTH + col].angle) == 1) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 1 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 2) ||
+							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 2 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1)) {
+							if (!((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol > 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow > 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle > 0) ||
+								  (this->m_tileInfos[row * BOARDWIDTH + col].deltaCol < 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow < 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle < 0))) {
+								this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+							}
+						}
+					}
+					// Wide attack variation
+					if (abs(this->m_tileInfos[row * BOARDWIDTH + col].angle) == 1) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 1 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 3) ||
+							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 3 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1)) {
+							if (!((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol > 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow > 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle > 0) ||
+								(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol < 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow < 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle < 0))) {
+								this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+							}
+						}
+					}
                     break;
                 } else {
                     this->m_tileInfos[row * BOARDWIDTH + col].valid = false;
@@ -1635,7 +1675,7 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
                                             this->m_boardBitset.test(topBitStart + 2)) {
                                             // Go to next tile
                                             nowRow = nowRow - 1;
-                                            nowI = j;
+                                            nowI = 2;
                                             found = true;
                                         } else {
                                             // Stop and update the path
@@ -1661,7 +1701,7 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
                                             this->m_boardBitset.test(leftBitStart + 2)) {
                                             // Go to next tile
                                             nowCol = nowCol - 1;
-                                            nowI = j;
+                                            nowI = 3;
                                             found = true;
                                         } else {
                                             // Stop and update the path
@@ -1687,7 +1727,7 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
                                             this->m_boardBitset.test(bottomBitStart + 2)) {
                                             // Go to next tile
                                             nowRow = nowRow + 1;
-                                            nowI = j;
+                                            nowI = 0;
                                             found = true;
                                         } else {
                                             // Stop and update the path
@@ -1713,7 +1753,7 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
                                             this->m_boardBitset.test(rightBitStart + 2)) {
                                             // Go to next tile
                                             nowCol = nowCol + 1;
-                                            nowI = j;
+                                            nowI = 1;
                                             found = true;
                                         } else {
                                             // Stop and update the path
@@ -1773,4 +1813,77 @@ void Board::saveCmd(int pos, char type) {
 
 vector<string> Board::getCmds() {
     return this->m_cmds;
+}
+
+void Board::bitsetToImage(unsigned char* imageWhite, unsigned char* imageRed) {
+	// Output initialization
+	int imageBoardWidth = (BOARDWIDTH * 2 + 1);
+	for (int row = 0; row < imageBoardWidth; row++) {
+		for (int col = 0; col < imageBoardWidth; col++) {
+			imageWhite[row * imageBoardWidth + col] = 0;
+			imageRed[row * imageBoardWidth + col] = 0;
+		}
+	}
+
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
+			int bitStart = row * BOARDWIDTH + col;
+			bitset<3> typeBit;
+			typeBit[2] = this->m_tempBoardBitset[bitStart];
+			typeBit[1] = this->m_tempBoardBitset[bitStart + 1];
+			typeBit[0] = this->m_tempBoardBitset[bitStart + 2];
+			switch (typeBit.to_ulong()) {
+			case 1:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				break;
+			case 2:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				break;
+			case 3:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				break;
+			case 4:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				break;
+			case 5:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				break;
+			case 6:
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
+				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
+				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				break;
+			default:
+				break;
+			}
+		}
+	}
 }
