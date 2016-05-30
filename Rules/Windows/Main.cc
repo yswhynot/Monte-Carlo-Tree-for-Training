@@ -37,16 +37,16 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	//playWithAI(db, 100, "COM18");
+	playWithAI(db, 5000, "COM18");
 
-    //playRandom(db, 1);
+    //playRandom(db, 100);
 
     //readDb(db, 10);
 
 	db->Close();
 	delete (IDisposable^)db;
 
-    testCases();
+    //testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -113,6 +113,7 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
 			board.updateBoardByCommand(string(msgChr), &winner);
 			states.push_back(board.getBoardBitset());
+
 			// Make response
 			string cmd = randomStep(&board, &states, &winner);
 			portChat.Write(gcnew String(cmd.c_str()));
@@ -122,9 +123,6 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 				break;
 			}
 		} while (winner == 0);
-
-		// If the game is end, continue
-		if (handle) continue;
 
 		/** Update database **/
 		if (updateDb(db, (winner == 1) ? true : false, states)) {
@@ -408,7 +406,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
+    winner = board.updateBoardByCommands(string("@0+ B1/ A2\\ C2+ @1/ @2\\ D0\\ D0\\ E1\\ F2\\ C2\\ E0\\ E0\\ D1\\"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list
@@ -419,7 +417,7 @@ void testCases() {
 	std::cout << endl;
     // Test check valid positions
     board.reset();
-    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
+    winner = board.updateBoardByCommands(string("@0/ B1+ @1+ B2+ B0/ D2+"));
     board.printType();
     int pos[TILENUM][4];
     int posCnt;
