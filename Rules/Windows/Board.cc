@@ -1662,6 +1662,9 @@ bool Board::checkValid(int pos, char type) {
     this->m_tempBoardBitset = this->m_boardBitset;
     this->m_tempMaxRow = this->m_maxRow;
     this->m_tempMaxCol = this->m_maxCol;
+	for (int i = 0; i < ALLDIM; i++) {
+		this->m_tempPaths[i] = this->m_paths[i];
+	}
     bool start = this->m_start;
     for (int i = 0; i < ALLDIM; i++) {
         this->m_tempPaths[i] = this->m_paths[i];
@@ -1682,7 +1685,6 @@ void Board::getValidPos(int pos[TILENUM][4], int* posCnt, int* choiceCnt) {
     *choiceCnt = 0;
     for (int tile = 0; tile < TILENUM; tile++) {
         bool validExist = false;
-        int last = 0;
         for (int tt = 1; tt <= 3; tt++) {
             char type;
             switch (tt) {
@@ -1694,25 +1696,20 @@ void Board::getValidPos(int pos[TILENUM][4], int* posCnt, int* choiceCnt) {
                 if (validExist) {
                     pos[*posCnt][tt] = 1;
                     (*choiceCnt)++;
-                    last = tt + 1;
                 } else {
+					// Set invalid type to 0
+					for (int i = 1; i <= 3; i++) {
+						pos[*posCnt][i] = 0;
+					}
+
                     pos[*posCnt][0] = tile;
-                    // Set invalid type to 0
-                    for (int i = 1; i < tt; i++) {
-                        pos[*posCnt][i] = 0;
-                    }
                     pos[*posCnt][tt] = 1;
                     (*choiceCnt)++;
-                    last = tt + 1;
                     validExist = true;
                 }
             }
         }
         if (validExist) {
-            // Set invalid type to 0
-            for (int i = last; i < 4; i++) {
-                pos[*posCnt][i] = 0;
-            }
             (*posCnt)++;
         }
     }
