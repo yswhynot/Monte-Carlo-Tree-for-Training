@@ -1324,6 +1324,8 @@ TileInfo* Board::getTileInfos(bool white) {
     // Pre-handle
     int compare = white? 0: 1;
     this->m_tempBoardBitset = this->m_boardBitset; // For function getRightEdge()
+	int paths[ALLDIM];
+	this->getPathsFromBitset(paths);
 
     for (int row = 0; row < BOARDWIDTH; row++) {
         for (int col = 0; col < BOARDWIDTH; col++) {
@@ -1344,13 +1346,12 @@ TileInfo* Board::getTileInfos(bool white) {
                     edge = this->m_boardBitset[bitStart + i];
                 }
 
-                if ((this->m_paths[bit + i] != 0) && (edge == compare)) {
+                if ((paths[bit + i] != 0) && (edge == compare)) {
                     int rr = ((this->m_paths[bit + i] - 1) / 4) / BOARDWIDTH;
                     int cc = ((this->m_paths[bit + i] - 1) / 4) % BOARDWIDTH;
                     int ii = (this->m_paths[bit + i] - 1) % 4;
 
                     this->m_tileInfos[row * BOARDWIDTH + col].valid = true;
-					this->m_tileInfos[row * BOARDWIDTH + col].white = white;
 					this->m_tileInfos[row * BOARDWIDTH + col].pos1 = row * BOARDWIDTH + col;
 					this->m_tileInfos[row * BOARDWIDTH + col].pos2 = rr * BOARDWIDTH + cc;
                     this->m_tileInfos[row * BOARDWIDTH + col].deltaRow = rr - row;
@@ -1405,9 +1406,246 @@ TileInfo* Board::getTileInfos(bool white) {
 							}
 						}
 					}
+					/** Find all the tiles on the current path **/
+					int nowRow = row;
+					int nowCol = col;
+					int nowI = i;
+
+					bool finish = false;
+					do {
+						// Find the other end in the same tile
+						bool found = false;
+						bitStart = (nowRow * BOARDWIDTH + nowCol) * 3;
+						for (int j = nowI + 1; j < 4 && found == false; j++) {
+							int endOne = (nowI == 3) ? this->getRightEdge(bitStart) : nowI;
+							int endTwo = (j == 3) ? this->getRightEdge(bitStart) : j;
+							if (this->m_boardBitset[bitStart + endOne] == this->m_boardBitset[bitStart + endTwo]) {
+								// Check neighbouring tile
+								switch (j) {
+								case 0:
+									if (nowRow >= 1) {
+										int topBitStart = ((nowRow - 1) * BOARDWIDTH + nowCol) * 3;
+										if (this->m_boardBitset.test(topBitStart) || this->m_boardBitset.test(topBitStart + 1) ||
+											this->m_boardBitset.test(topBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowRow = nowRow - 1;
+											nowI = 2;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 1:
+									if (nowCol >= 1) {
+										int leftBitStart = (nowRow * BOARDWIDTH + nowCol - 1) * 3;
+										if (this->m_boardBitset.test(leftBitStart) || this->m_boardBitset.test(leftBitStart + 1) ||
+											this->m_boardBitset.test(leftBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowCol = nowCol - 1;
+											nowI = 3;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 2:
+									if (nowRow + 1 < BOARDWIDTH) {
+										int bottomBitStart = ((nowRow + 1) * BOARDWIDTH + nowCol) * 3;
+										if (this->m_boardBitset.test(bottomBitStart) || this->m_boardBitset.test(bottomBitStart + 1) ||
+											this->m_boardBitset.test(bottomBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowRow = nowRow + 1;
+											nowI = 0;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 3:
+									if (nowCol + 1 < BOARDWIDTH) {
+										int rightBitStart = (nowRow * BOARDWIDTH + nowCol + 1) * 3;
+										if (this->m_boardBitset.test(rightBitStart) || this->m_boardBitset.test(rightBitStart + 1) ||
+											this->m_boardBitset.test(rightBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowCol = nowCol + 1;
+											nowI = 1;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								}
+							}
+						}
+						for (int j = 0; j < nowI && found == false; j++) {
+							int endOne = (nowI == 3) ? this->getRightEdge(bitStart) : nowI;
+							int endTwo = (j == 3) ? this->getRightEdge(bitStart) : j;
+							if (this->m_boardBitset[bitStart + endOne] == this->m_boardBitset[bitStart + endTwo]) {
+								// Check neighbouring tile
+								switch (j) {
+								case 0:
+									if (nowRow >= 1) {
+										int topBitStart = ((nowRow - 1) * BOARDWIDTH + nowCol) * 3;
+										if (this->m_boardBitset.test(topBitStart) || this->m_boardBitset.test(topBitStart + 1) ||
+											this->m_boardBitset.test(topBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowRow = nowRow - 1;
+											nowI = 2;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 1:
+									if (nowCol >= 1) {
+										int leftBitStart = (nowRow * BOARDWIDTH + nowCol - 1) * 3;
+										if (this->m_boardBitset.test(leftBitStart) || this->m_boardBitset.test(leftBitStart + 1) ||
+											this->m_boardBitset.test(leftBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowCol = nowCol - 1;
+											nowI = 3;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 2:
+									if (nowRow + 1 < BOARDWIDTH) {
+										int bottomBitStart = ((nowRow + 1) * BOARDWIDTH + nowCol) * 3;
+										if (this->m_boardBitset.test(bottomBitStart) || this->m_boardBitset.test(bottomBitStart + 1) ||
+											this->m_boardBitset.test(bottomBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowRow = nowRow + 1;
+											nowI = 0;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								case 3:
+									if (nowCol + 1 < BOARDWIDTH) {
+										int rightBitStart = (nowRow * BOARDWIDTH + nowCol + 1) * 3;
+										if (this->m_boardBitset.test(rightBitStart) || this->m_boardBitset.test(rightBitStart + 1) ||
+											this->m_boardBitset.test(rightBitStart + 2)) {
+											// Update current tile
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].valid = true;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].attack = this->m_tileInfos[row * BOARDWIDTH + col].attack;
+											this->m_tileInfos[nowRow * BOARDWIDTH + nowCol].endPoint = false;
+											// Go to next tile
+											nowCol = nowCol + 1;
+											nowI = 1;
+											found = true;
+										}
+										else {
+											// Stop at end point
+											found = true;
+											finish = true;
+										}
+									}
+									else {
+										// Stop at end point
+										found = true;
+										finish = true;
+									}
+									break;
+								}
+							}
+						}
+					} while (!finish);
+					// Update the endPoint field after all the operations
+					this->m_tileInfos[row * BOARDWIDTH + col].endPoint = true;
                     break;
-                } else {
-                    this->m_tileInfos[row * BOARDWIDTH + col].valid = false;
                 }
             }
         }
@@ -1815,74 +2053,125 @@ vector<string> Board::getCmds() {
     return this->m_cmds;
 }
 
-void Board::bitsetToImage(unsigned char* imageWhite, unsigned char* imageRed) {
+void Board::boardConverter(bool* white, bool* red) {
 	// Output initialization
-	int imageBoardWidth = (BOARDWIDTH * 2 + 1);
-	for (int row = 0; row < imageBoardWidth; row++) {
-		for (int col = 0; col < imageBoardWidth; col++) {
-			imageWhite[row * imageBoardWidth + col] = 0;
-			imageRed[row * imageBoardWidth + col] = 0;
+	for (int row = 0; row < OUTPUTWIDTH; row++) {
+		for (int col = 0; col < OUTPUTWIDTH; col++) {
+			white[row * OUTPUTWIDTH + col] = false;
+			red[row * OUTPUTWIDTH + col] = false;
 		}
 	}
 
+	// Pre-handling
+	this->m_tempBoardBitset = this->m_boardBitset;
+
 	for (int row = 0; row < BOARDWIDTH; row++) {
 		for (int col = 0; col < BOARDWIDTH; col++) {
-			int bitStart = row * BOARDWIDTH + col;
+			int bitStart = (row * BOARDWIDTH + col) * 3;
 			bitset<3> typeBit;
 			typeBit[2] = this->m_tempBoardBitset[bitStart];
 			typeBit[1] = this->m_tempBoardBitset[bitStart + 1];
 			typeBit[0] = this->m_tempBoardBitset[bitStart + 2];
 			switch (typeBit.to_ulong()) {
 			case 1:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
-				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				white[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
+				red[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
 				break;
 			case 2:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
 				break;
 			case 3:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
-				imageWhite[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
+				white[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				red[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
 				break;
 			case 4:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
-				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				white[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
+				red[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
 				break;
 			case 5:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
 				break;
 			case 6:
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageWhite[(2 * row) * BOARDWIDTH + 2 * col + 1] = 255;
-				imageWhite[(2 * row + 1) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col] = 255;
-				imageRed[(2 * row) * BOARDWIDTH + 2 * col - 1] = 255;
-				imageRed[(2 * row - 1) * BOARDWIDTH + 2 * col] = 255;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				white[(2 * row) * OUTPUTWIDTH + 2 * col + 1] = true;
+				white[(2 * row + 1) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col] = true;
+				red[(2 * row) * OUTPUTWIDTH + 2 * col - 1] = true;
+				red[(2 * row - 1) * OUTPUTWIDTH + 2 * col] = true;
 				break;
 			default:
 				break;
+			}
+		}
+	}
+}
+
+void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bitset<DIM> boardBitset) {
+	// Pre-handling
+	if (boardBitset != NULL) {
+		this->m_boardBitset = boardBitset;
+	}
+
+	// Output initialization
+	for (int row = 0; row < OUTPUTWIDTH; row++) {
+		for (int col = 0; col < OUTPUTWIDTH; col++) {
+			imageWhite[row * OUTPUTWIDTH + col] = 0;
+			imageRed[row * OUTPUTWIDTH + col] = 0;
+		}
+	}
+
+	// Get the nine-bit information
+	bool white[OUTPUTWIDTH * OUTPUTWIDTH];
+	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
+	this->boardConverter(white, red);
+
+	// Get tileInfos
+	TileInfo* whiteTileInfos;
+	whiteTileInfos = this->getTileInfos(true);
+	TileInfo* redTileInfos;
+	redTileInfos = this->getTileInfos(false);
+
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
+			if (whiteTileInfos[row * BOARDWIDTH + col].valid) {
+				for (int rr = -1; rr <= 1; rr++) {
+					for (int cc = -1; cc <= 1; cc++) {
+						if (white[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == 1) {
+							imageWhite[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] = (whiteTileInfos[row * BOARDWIDTH + col].attack) ? 255 : 128;
+						}
+					}
+				}
+			}
+			if (redTileInfos[row * BOARDWIDTH + col].valid) {
+				for (int rr = -1; rr <= 1; rr++) {
+					for (int cc = -1; cc <= 1; cc++) {
+						if (red[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == 1) {
+							imageRed[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] = (redTileInfos[row * BOARDWIDTH + col].attack) ? 255 : 128;
+						}
+					}
+				}
 			}
 		}
 	}

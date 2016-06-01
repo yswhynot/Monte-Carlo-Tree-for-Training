@@ -7,10 +7,11 @@ using namespace std;
 #define BOARD_H_
 
 #define BOARDWIDTH 20
-#define TILENUM 400
-#define DIM 1200
-#define ALLDIM 1600
+#define TILENUM 400 // BOARDWIDTH * BOARDWIDTH
+#define DIM 1200 // TILENUM * 3
+#define ALLDIM 1600 // TILENUM * 4
 #define LINEGAP 8
+#define OUTPUTWIDTH 41 // BOARDWIDTH * 2 + 1
 
 class Board {
 public:
@@ -26,9 +27,9 @@ public:
     void getValidPos(int pos[TILENUM][4], int* posCnt, int* choiceCnt);
     void getPathsFromBitset(int paths[ALLDIM]);
     bitset<DIM> getBoardBitset();
-    void saveCmd(int pos, char type);
     vector<string> getCmds();
-	void bitsetToImage(unsigned char* imageWhite, unsigned char* imageRed);
+	void boardConverter(bool* white, bool* red);
+	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bitset<DIM> boardBitset = NULL);
 private:
     /** member functions **/
     bool forcePlay(int pos);
@@ -36,6 +37,7 @@ private:
     bool singleTileUpdate(int pos, char type);
     void shiftTempBoardBitset(int pos);
     int getRightEdge(int bitStart);
+	void saveCmd(int pos, char type);
     /** member variables **/
     bool m_start;
     int m_winner; // 0: game is not end; 1: player 1 wins; 2: player 2 wins

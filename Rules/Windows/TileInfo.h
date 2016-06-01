@@ -3,13 +3,14 @@
 
 struct TileInfo {
 	bool valid;
-	bool white;
-	int pos1;
-	int pos2;
-    int deltaRow;
-    int deltaCol;
-    int angle;
-	bool attack;
+	bool attack; // Depends on valid
+	bool endPoint; // Depends on valid
+	int pos1; // Depends on endPoint
+	int pos2; // Depends on endPoint
+    int deltaRow; // Depends on endPoint
+    int deltaCol; // Depends on endPoint
+    int angle; // Depends on endPoint
+	
 };
 
 #endif /* TILEINFO_H_ */

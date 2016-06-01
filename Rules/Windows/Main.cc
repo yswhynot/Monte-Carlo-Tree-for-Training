@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "PortChat.cpp"
 
 #include <iostream>
 #include <vector>
@@ -8,7 +9,7 @@
 #include <sstream>
 #include <fstream>
 
-#include "PortChat.cpp"
+#include <opencv2/opencv.hpp>
 
 using namespace std;
 using namespace System;
@@ -23,12 +24,13 @@ void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, 
 void playRandom(SQLiteConnection^ db, int nGame);
 string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
-bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states);
+bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states);
 string bitsetToString(STATE state);
 void printStates(vector<STATE> states);
 void printState(STATE state);
 bool readDb(SQLiteConnection^ db, int num);
 bool writeTrx(Board board, string filename);
+void saveImage(Board board, STATE state, string filenameWhite, string filenameRed);
 void testCases();
 
 int main() {
@@ -39,14 +41,14 @@ int main() {
 	
 	//playWithAI(db, 100, "COM18");
 
-    //playRandom(db, 1);
+    playRandom(db, 1);
 
     //readDb(db, 10);
 
 	db->Close();
 	delete (IDisposable^)db;
 
-    testCases();
+    //testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -127,7 +129,7 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 		if (handle) continue;
 
 		/** Update database **/
-		if (updateDb(db, (winner == 1) ? true : false, states)) {
+		if (updateDb(db, (winner == 1) ? true : false, board, states)) {
 			std::cout << "Successfully record game " << game << "\n";
 			// Write trx
 			stringstream ss;
@@ -169,7 +171,7 @@ void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, 
 				if (winner == (AIWhite? 1: 2)) {
 					vector<STATE> tempStates = *states;
 					tempStates.push_back(tempBoard.getBoardBitset());
-					if (updateDb(db, (winner == 1) ? true : false, tempStates)) {
+					if (updateDb(db, (winner == 1) ? true : false, tempBoard, tempStates)) {
 						std::cout << "Successfully record game " << gameIndex << ", possible ending " << endIndex << "\n";
 						// Write trx
 						stringstream ss;
@@ -192,7 +194,7 @@ void playRandom(SQLiteConnection^ db, int nGame) {
 
         bool win = randomSteps(&board, &states);
 
-        if (updateDb(db, win, states)) {
+        if (updateDb(db, win, board, states)) {
             std::cout << "Successfully record game " << game << "\n";
             // Write trx
             stringstream ss;
@@ -292,7 +294,7 @@ void printState(STATE state) {
     std::cout << "\n";
 }
 
-bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states) {
+bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states) {
 	SQLiteCommand^ cmd = db->CreateCommand();
 	SQLiteTransaction^ tx = db->BeginTransaction();
 	cmd->Transaction = tx;
@@ -325,6 +327,20 @@ bool updateDb(SQLiteConnection^ db, bool win, vector<STATE> states) {
 				sql = "INSERT INTO winning_rate VALUES ('" + bitsetToString(states[s]) + "'," + (win ? "1" : "0") + ",1);";
 				cmd->CommandText = gcnew String(sql.c_str());
 				cmd->ExecuteNonQuery();
+				// Save a new image
+				sql = "select count (board) from winning_rate;";
+				cmd->CommandText = gcnew String(sql.c_str());
+				reader = cmd->ExecuteReader();
+				reader->Read();
+				int line = reader->GetInt32(0);
+				reader->Close();
+				stringstream ssWhite;
+				ssWhite << "./image/W" << line << ".jpeg";
+				string filenameWhite = ssWhite.str();
+				stringstream ssRed;
+				ssRed << "./image/R" << line << ".jpeg";
+				string filenameRed = ssRed.str();
+				saveImage(board, states[s], filenameWhite, filenameRed);
 			}
 		}
 		tx->Commit();
@@ -403,6 +419,14 @@ bool writeTrx(Board board, string filename) {
     return true;
 }
 
+void saveImage(Board board, STATE state, string filenameWhite, string filenameRed) {
+	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	board.imageOutput(whiteImage, redImage, state);
+	cv::imwrite(filenameWhite, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
+	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
+}
+
 void testCases() {
     /** Testing for Board **/
     Board board;
@@ -419,7 +443,7 @@ void testCases() {
 	std::cout << endl;
     // Test check valid positions
     board.reset();
-    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
+    winner = board.updateBoardByCommands(string("@0/ A2\\ A3+ B3+ C3/ C2/"));
     board.printType();
     int pos[TILENUM][4];
     int posCnt;
@@ -435,38 +459,43 @@ void testCases() {
     tileInfos = board.getTileInfos(true);
     for (int i = 0; i < TILENUM; i++) {
         if (tileInfos[i].valid) {
-            std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << " " << tileInfos[i].attack << "\n";
+			std::cout << i << ": " << ((tileInfos[i].endPoint) ? " End Point" : " ") << ((tileInfos[i].attack) ? " Attack":"") << "\n";
         }
     }
     std::cout << "\n";
     tileInfos = board.getTileInfos(false);
     for (int i = 0; i < TILENUM; i++) {
         if (tileInfos[i].valid) {
-			std::cout << i << ": " << tileInfos[i].deltaRow << " " << tileInfos[i].deltaCol << " " << tileInfos[i].angle << " " << tileInfos[i].attack << "\n";
+			std::cout << i << ": " << ((tileInfos[i].endPoint) ? " End Point" : " ") << ((tileInfos[i].attack) ? " Attack":"") << "\n";
         }
     }
     // Test getPathsFromBitset()
     int paths[ALLDIM];
     board.getPathsFromBitset(paths);
-    /** Testing for Ann **/
-    /*
-    int x[7][3] = {{0,0,0},{0,0,1},{0,1,0},{0,1,1},{1,0,0},{1,0,1},{1,1,0}};
-    int y[7][3] = {{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0},{1,1,1},{0,0,0}};
-
-    int** xx = new int*[7];
-    int** yy = new int*[7];
-
-    for (int i = 0; i < 7; i++) {
-        xx[i] = x[i];
-        yy[i] = y[i];
-    }
-
-    Ann ann(3);
-    ann.training(xx, yy, 7);
-    ann.print();
-
-    delete [] xx;
-    delete [] yy;
-    */
+	// Test board converter
+	board.reset();
+	board.updateBoardByCommands(string("@0/ A2\\ A3+ B3+ C3/ C2/"));
+	board.printType();
+	bool white[OUTPUTWIDTH * OUTPUTWIDTH];
+	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
+	board.boardConverter(white, red);
+	for (int row = 0; row < OUTPUTWIDTH; row++) {
+		for (int col = 0; col < OUTPUTWIDTH; col++) {
+			std::cout << white[row * OUTPUTWIDTH + col] << " ";
+		}
+		std::cout << endl;
+	}
+	std::cout << endl;
+	for (int row = 0; row < OUTPUTWIDTH; row++) {
+		for (int col = 0; col < OUTPUTWIDTH; col++) {
+			std::cout << red[row * OUTPUTWIDTH + col] << " ";
+		}
+		std::cout << endl;
+	}
+	// Test image output
+	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	board.imageOutput(whiteImage, redImage);
+	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
     return;
 }
