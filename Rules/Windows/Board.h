@@ -30,6 +30,7 @@ public:
     vector<string> getCmds();
 	void boardConverter(bool* white, bool* red);
 	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bitset<DIM> boardBitset = NULL);
+	void loadBoardFromString(string state);
 private:
     /** member functions **/
     bool forcePlay(int pos);

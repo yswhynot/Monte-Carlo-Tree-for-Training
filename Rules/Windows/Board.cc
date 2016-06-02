@@ -2173,3 +2173,16 @@ void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bits
 		}
 	}
 }
+
+void Board::loadBoardFromString(string state) {
+	bitset<DIM> stateBitset;
+	for (int bit = 0; bit < DIM; bit++) {
+		if ((state[bit] - '0') == 0) {
+			stateBitset.reset(bit);
+		}
+		else {
+			stateBitset.set(bit);
+		}
+	}
+	this->m_boardBitset = stateBitset;
+}

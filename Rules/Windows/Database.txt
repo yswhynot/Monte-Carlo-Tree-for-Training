@@ -1,2 +1,2 @@
-create table winning_rate(board text primary key, rate int not null, num int not null);
+create table winning_rate(board text, rate integer not null, num integer not null, id integer primary key autoincrement);
 delete from winning_rate;
