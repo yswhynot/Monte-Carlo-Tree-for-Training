@@ -29,7 +29,7 @@ public:
     bitset<DIM> getBoardBitset();
     vector<string> getCmds();
 	void boardConverter(bool* white, bool* red);
-	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bitset<DIM> boardBitset = NULL);
+	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed);
 	void loadBoardFromString(string state);
 private:
     /** member functions **/

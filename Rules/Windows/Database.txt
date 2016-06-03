@@ -1,2 +1,4 @@
-create table winning_rate(board text, rate integer not null, num integer not null, id integer primary key autoincrement);
+create table winning_rate(id integer primary key autoincrement, board text not null, rate integer not null, num integer not null);
+
 delete from winning_rate;
+delete from sqlite_sequence where name='winning_rate';

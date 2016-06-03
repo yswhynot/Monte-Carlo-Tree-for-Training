@@ -18,6 +18,11 @@ using namespace System::Data::SQLite;
 typedef bitset<DIM> STATE;
 #define TRIAL 5
 
+#define DBID 0
+#define DBBOARD 1
+#define DBRATE 2
+#define DBNUM 3
+
 /** Function prototypes **/
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
 void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
@@ -40,9 +45,9 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	playWithAI(db, 5000, "COM18");
+	//playWithAI(db, 5000, "COM18");
 
-    //playRandom(db, 1);
+    playRandom(db, 1);
 
     //readDb(db, 10);
 
@@ -310,8 +315,8 @@ bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states)
 			SQLiteDataReader^ reader = cmd->ExecuteReader();
 			if (reader->HasRows) {
 				reader->Read();
-				int rate = reader->GetInt32(1) + (win ? 1 : 0);
-				int num = reader->GetInt32(2) + 1;
+				int rate = reader->GetInt32(DBRATE) + (win ? 1 : 0);
+				int num = reader->GetInt32(DBNUM) + 1;
 				// Finish reading
 				reader->Close();
 
@@ -327,21 +332,21 @@ bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states)
 				// Finish reading
 				reader->Close();
 				// Insert new data
-				sql = "INSERT INTO winning_rate VALUES ('" + bitsetToString(states[s]) + "'," + (win ? "1" : "0") + ",1, NULL);";
+				sql = "INSERT INTO winning_rate VALUES (NULL, '" + bitsetToString(states[s]) + "'," + (win ? "1" : "0") + ",1);";
 				cmd->CommandText = gcnew String(sql.c_str());
 				cmd->ExecuteNonQuery();
 				// Save a new image
-				sql = "select count (board) from winning_rate;";
+				sql = "SELECT id FROM winning_rate WHERE board = '" + bitsetToString(states[s]) + "';";
 				cmd->CommandText = gcnew String(sql.c_str());
 				reader = cmd->ExecuteReader();
 				reader->Read();
-				int line = reader->GetInt32(0);
+				int id = reader->GetInt32(0);
 				reader->Close();
 				stringstream ssWhite;
-				ssWhite << "./image/W" << line << ".jpeg";
+				ssWhite << "./image/W" << id << ".jpeg";
 				string filenameWhite = ssWhite.str();
 				stringstream ssRed;
-				ssRed << "./image/R" << line << ".jpeg";
+				ssRed << "./image/R" << id << ".jpeg";
 				string filenameRed = ssRed.str();
 				saveImage(board, states[s], filenameWhite, filenameRed);
 			}
@@ -375,7 +380,7 @@ bool readDb(SQLiteConnection^ db, int num) {
 		while (reader->Read() && cnt <= num) {
 			std::cout << "Pattern " << cnt << ":\n";
 			// Handle bitset
-			char* sStr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(reader->GetString(0));
+			char* sStr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(reader->GetString(DBBOARD));
 			STATE s;
 			for (int bit = 0; bit < DIM; bit++) {
 				if ((sStr[bit] - '0') == 0) {
@@ -387,8 +392,8 @@ bool readDb(SQLiteConnection^ db, int num) {
 			}
 			printState(s);
 			// Handle data
-			int rate = reader->GetInt32(1);
-			int rNum = reader->GetInt32(2);
+			int rate = reader->GetInt32(DBRATE);
+			int rNum = reader->GetInt32(DBNUM);
 			double wRate = (double)rate / cnt;
 			std::cout << "Winning number: " << rate << ", total number: " << rNum << "\n";
 			printf("Winning rate: %.2f\n", wRate);
@@ -425,7 +430,8 @@ bool writeTrx(Board board, string filename) {
 void saveImage(Board board, STATE state, string filenameWhite, string filenameRed) {
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	board.imageOutput(whiteImage, redImage, state);
+	board.loadBoardFromString(bitsetToString(state));
+	board.imageOutput(whiteImage, redImage);
 	cv::imwrite(filenameWhite, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
 	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
 }
@@ -483,7 +489,7 @@ void testCases() {
     board.getPathsFromBitset(paths);
 	// Test board converter
 	board.reset();
-	board.updateBoardByCommands(string("@0/ A2\\ A3+ B3+ C3/ C2/"));
+	board.updateBoardByCommands(string("@0/ @1\\"));
 	board.printType();
 	bool white[OUTPUTWIDTH * OUTPUTWIDTH];
 	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
@@ -495,16 +501,19 @@ void testCases() {
 		std::cout << endl;
 	}
 	std::cout << endl;
+	/*
 	for (int row = 0; row < OUTPUTWIDTH; row++) {
 		for (int col = 0; col < OUTPUTWIDTH; col++) {
 			std::cout << red[row * OUTPUTWIDTH + col] << " ";
 		}
 		std::cout << endl;
 	}
+	*/
 	// Test image output
+	board.loadBoardFromString("000000000000000000000000000000000000000000000000000000000000000001110100000000000000000000000000000000000000000000000000000101001011000000000000000000000000000000000000000000000000000100110101000000000000000000000000000000000000000000000000000010010110101001000000000000000000000000000000000000000000000000000010110000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.imageOutput(whiteImage, redImage);
-	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
+	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
     return;
 }

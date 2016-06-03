@@ -1323,7 +1323,7 @@ void Board::printBit() {
 TileInfo* Board::getTileInfos(bool white) {
     // Pre-handle
     int compare = white? 0: 1;
-    this->m_tempBoardBitset = this->m_boardBitset; // For function getRightEdge()
+	this->m_tempBoardBitset = this->m_boardBitset;// For function getRightEdge()
 	int paths[ALLDIM];
 	this->getPathsFromBitset(paths);
 
@@ -1346,10 +1346,11 @@ TileInfo* Board::getTileInfos(bool white) {
                     edge = this->m_boardBitset[bitStart + i];
                 }
 
-                if ((paths[bit + i] != 0) && (edge == compare)) {
-                    int rr = ((this->m_paths[bit + i] - 1) / 4) / BOARDWIDTH;
-                    int cc = ((this->m_paths[bit + i] - 1) / 4) % BOARDWIDTH;
-                    int ii = (this->m_paths[bit + i] - 1) % 4;
+				int bitOffset = bit + i;
+				if ((paths[bitOffset] != 0) && (edge == compare)) {
+					int rr = ((paths[bitOffset] - 1) / 4) / BOARDWIDTH;
+					int cc = ((paths[bitOffset] - 1) / 4) % BOARDWIDTH;
+					int ii = (paths[bitOffset] - 1) % 4;
 
                     this->m_tileInfos[row * BOARDWIDTH + col].valid = true;
 					this->m_tileInfos[row * BOARDWIDTH + col].pos1 = row * BOARDWIDTH + col;
@@ -1372,6 +1373,13 @@ TileInfo* Board::getTileInfos(bool white) {
                     }
 					/** Use current information to judge attack **/
 					this->m_tileInfos[row * BOARDWIDTH + col].attack = false;
+					// Win by line
+					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 2) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == LINEGAP) || (abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == LINEGAP)) {
+							this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+						}
+					}
+
 					// Flat narrow attack
 					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 0) {
 						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 0 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1) ||
@@ -1387,24 +1395,42 @@ TileInfo* Board::getTileInfos(bool white) {
 						}
 					}
 					// Narrow attack variation
-					if (abs(this->m_tileInfos[row * BOARDWIDTH + col].angle) == 1) {
-						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 1 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 2) ||
-							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 2 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1)) {
-							if (!((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol > 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow > 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle > 0) ||
-								  (this->m_tileInfos[row * BOARDWIDTH + col].deltaCol < 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow < 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle < 0))) {
-								this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
-							}
-						}
+					if (((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 0) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 1) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 2) && (ii == 1) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -2) && (ii == 2) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 2) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 3) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 2) && (ii == 0) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -2) && (ii == 3) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 0) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 3) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 2) && (ii == 3) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -2) && (ii == 2) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 1) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -2) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 2) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 2) && (ii == 0) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -2) && (ii == 1) && (i == 0))) {
+						this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
 					}
 					// Wide attack variation
-					if (abs(this->m_tileInfos[row * BOARDWIDTH + col].angle) == 1) {
-						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 1 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 3) ||
-							(abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == 3 && abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == 1)) {
-							if (!((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol > 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow > 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle > 0) ||
-								(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol < 0 && this->m_tileInfos[row * BOARDWIDTH + col].deltaRow < 0 && this->m_tileInfos[row * BOARDWIDTH + col].angle < 0))) {
-								this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
-							}
-						}
+					if (((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 0) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 1) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 3) && (ii == 1) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -3) && (ii == 2) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 2) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 3) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 3) && (ii == 0) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -3) && (ii == 3) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 0) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 3) && (i == 0)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 3) && (ii == 3) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -3) && (ii == 2) && (i == 3)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 1) && (ii == 1) && (i == 2)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -3) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -1) && (ii == 2) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == -1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == 3) && (ii == 0) && (i == 1)) ||
+						((this->m_tileInfos[row * BOARDWIDTH + col].deltaCol == 1) && (this->m_tileInfos[row * BOARDWIDTH + col].deltaRow == -3) && (ii == 1) && (i == 0))) {
+						this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
 					}
 					/** Find all the tiles on the current path **/
 					int nowRow = row;
@@ -1650,6 +1676,21 @@ TileInfo* Board::getTileInfos(bool white) {
             }
         }
     }
+
+	// If there is a tile but not valid, then it should be the path as winning
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
+			int bitStart = (row * BOARDWIDTH + col) * 3;
+			if (this->m_boardBitset.test(bitStart) || this->m_boardBitset.test(bitStart + 1) ||
+				this->m_boardBitset.test(bitStart + 2)) {
+				if (this->m_tileInfos[row * BOARDWIDTH + col].valid == false) {
+					this->m_tileInfos[row * BOARDWIDTH + col].valid = true;
+					this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
+				}
+			}
+		}
+	}
+
     return this->m_tileInfos;
 }
 
@@ -2125,12 +2166,7 @@ void Board::boardConverter(bool* white, bool* red) {
 	}
 }
 
-void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bitset<DIM> boardBitset) {
-	// Pre-handling
-	if (boardBitset != NULL) {
-		this->m_boardBitset = boardBitset;
-	}
-
+void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed) {
 	// Output initialization
 	for (int row = 0; row < OUTPUTWIDTH; row++) {
 		for (int col = 0; col < OUTPUTWIDTH; col++) {
@@ -2144,27 +2180,30 @@ void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed, bits
 	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
 	this->boardConverter(white, red);
 
-	// Get tileInfos
 	TileInfo* whiteTileInfos;
 	whiteTileInfos = this->getTileInfos(true);
-	TileInfo* redTileInfos;
-	redTileInfos = this->getTileInfos(false);
-
 	for (int row = 0; row < BOARDWIDTH; row++) {
 		for (int col = 0; col < BOARDWIDTH; col++) {
 			if (whiteTileInfos[row * BOARDWIDTH + col].valid) {
 				for (int rr = -1; rr <= 1; rr++) {
 					for (int cc = -1; cc <= 1; cc++) {
-						if (white[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == 1) {
+						if (white[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == true) {
 							imageWhite[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] = (whiteTileInfos[row * BOARDWIDTH + col].attack) ? 255 : 128;
 						}
 					}
 				}
 			}
+		}
+	}
+
+	TileInfo* redTileInfos;
+	redTileInfos = this->getTileInfos(false);
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
 			if (redTileInfos[row * BOARDWIDTH + col].valid) {
 				for (int rr = -1; rr <= 1; rr++) {
 					for (int cc = -1; cc <= 1; cc++) {
-						if (red[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == 1) {
+						if (red[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == true) {
 							imageRed[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] = (redTileInfos[row * BOARDWIDTH + col].attack) ? 255 : 128;
 						}
 					}
