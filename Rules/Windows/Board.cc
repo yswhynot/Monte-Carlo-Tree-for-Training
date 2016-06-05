@@ -1383,7 +1383,7 @@ TileInfo* Board::getTileInfos(bool white) {
 					this->m_tileInfos[row * BOARDWIDTH + col].attack = false;
 					// Win by line
 					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 2) {
-						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == LINEGAP) || (abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == LINEGAP)) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == LINEGAP - 1) || (abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == LINEGAP - 1)) {
 							this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
 						}
 					}
