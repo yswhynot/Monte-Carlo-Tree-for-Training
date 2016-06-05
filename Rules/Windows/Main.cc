@@ -487,33 +487,30 @@ void createTrainingTxt(SQLiteConnection^ db) {
 		cmd->CommandText = gcnew String(ssSql.str().c_str());
 		cmd->ExecuteNonQuery();
 	}
-	/** Create TXTs **/
+	/** Create TXTs for white **/
 	sql = "SELECT * FROM winning_rate;";
 	cmd->CommandText = gcnew String(sql.c_str());
 	SQLiteDataReader^ reader = cmd->ExecuteReader();
 	
 	if (reader->HasRows) {
-		ofstream fTest("./txt/test.txt");
-		ofstream fTrain("./txt/train.txt");
-		ofstream fVal("./txt/val.txt");
-			
+		ofstream fTest("./txt/testW.txt");
+		ofstream fTrain("./txt/trainW.txt");
+		ofstream fVal("./txt/valW.txt");
+		
+		int cnt = 0;
 		while (reader->Read()) {
-			// All write samples to train
 			stringstream ss;
 			ss << "W" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
-			fTrain << ss.str();
-
-			// Half of the red samples to test or val
-			if (reader->GetInt32(DBID) % 2 == 0) {
-				stringstream ss;
-				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
+			if (cnt % 4 == 0) {
 				fTest << ss.str();
 			}
-			else {
-				stringstream ss;
-				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
+			else if (cnt % 5 == 0) {
 				fVal << ss.str();
+			} else {
+				fTrain << ss.str();
 			}
+			// Update counter
+			cnt++;
 		}
 		// Finish reading
 		reader->Close();
@@ -521,7 +518,46 @@ void createTrainingTxt(SQLiteConnection^ db) {
 		fTest.close();
 		fTrain.close();
 		fVal.close();
-		std::cout << "Sucessfully create TXTs\n";
+		std::cout << "Sucessfully create TXTs for white\n";
+	}
+	else {
+		// Finish reading
+		reader->Close();
+		std::cout << "No result found\n";
+	}
+	/** Create TXTs for red **/
+	sql = "SELECT * FROM winning_rate;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	reader = cmd->ExecuteReader();
+
+	if (reader->HasRows) {
+		ofstream fTest("./txt/testR.txt");
+		ofstream fTrain("./txt/trainR.txt");
+		ofstream fVal("./txt/valR.txt");
+
+		int cnt = 0;
+		while (reader->Read()) {
+			stringstream ss;
+			ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
+			if (cnt % 4 == 0) {
+				fTest << ss.str();
+			}
+			else if (cnt % 5 == 0) {
+				fVal << ss.str();
+			}
+			else {
+				fTrain << ss.str();
+			}
+			// Update counter
+			cnt++;
+		}
+		// Finish reading
+		reader->Close();
+		// Close files
+		fTest.close();
+		fTrain.close();
+		fVal.close();
+		std::cout << "Sucessfully create TXTs for red\n";
 	}
 	else {
 		// Finish reading
