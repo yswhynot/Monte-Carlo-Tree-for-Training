@@ -25,6 +25,9 @@ typedef bitset<DIM> STATE;
 #define DBWRATE 4
 #define DBCLASS 5
 
+#define NUMTHRESHOLD 10
+#define TOTALCLASS 10
+
 /** Function prototypes **/
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
 void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
@@ -459,20 +462,22 @@ void createTrainingTxt(SQLiteConnection^ db) {
 	cmd->CommandText = gcnew String(sql.c_str());
 	cmd->ExecuteNonQuery();
 	// Delete unneccessary data
-	sql = "DELETE FROM winning_rate WHERE num < 10;";
-	cmd->CommandText = gcnew String(sql.c_str());
+	stringstream ssSql;
+	ssSql << "DELETE FROM winning_rate WHERE num < " << NUMTHRESHOLD;
+	cmd->CommandText = gcnew String(ssSql.str().c_str());
 	cmd->ExecuteNonQuery();
 	// Calculate winning rate
 	sql = "UPDATE winning_rate SET wRate = (CAST(rate AS DOUBLE) / num);";
 	cmd->CommandText = gcnew String(sql.c_str());
 	cmd->ExecuteNonQuery();
 	// Set class
-	for (int c = 0; c < 10; c++) {
-		double min = c / 10.0;
-		double max = (c + 1) / 10.0;
+	for (int c = 0; c < TOTALCLASS; c++) {
+		double min = (double)c / TOTALCLASS;
+		double max = (double)(c + 1) / TOTALCLASS;
 
 		stringstream ssSql;
-		if (max == 1.0) {
+		if (c == TOTALCLASS - 1) {
+			max = 1.0;
 			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate <= " << max << ";";
 		}
 		else {
@@ -501,12 +506,12 @@ void createTrainingTxt(SQLiteConnection^ db) {
 			// Half of the red samples to test or val
 			if (reader->GetInt32(DBID) % 2 == 0) {
 				stringstream ss;
-				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
+				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
 				fTest << ss.str();
 			}
 			else {
 				stringstream ss;
-				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
+				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
 				fVal << ss.str();
 			}
 		}
