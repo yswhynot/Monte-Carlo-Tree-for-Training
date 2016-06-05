@@ -22,6 +22,8 @@ typedef bitset<DIM> STATE;
 #define DBBOARD 1
 #define DBRATE 2
 #define DBNUM 3
+#define DBWRATE 4
+#define DBCLASS 5
 
 /** Function prototypes **/
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
@@ -37,6 +39,7 @@ bool readDb(SQLiteConnection^ db, int num);
 bool writeTrx(Board board, string filename);
 void saveImage(Board board, STATE state, string filenameWhite, string filenameRed);
 void printBoardFromBitset(string state);
+void createTrainingTxt(SQLiteConnection^ db);
 void testCases();
 
 int main() {
@@ -47,9 +50,11 @@ int main() {
 	
 	//playWithAI(db, 5000, "COM18");
 
-    playRandom(db, 1);
+    //playRandom(db, 1);
 
     //readDb(db, 10);
+
+	createTrainingTxt(db);
 
 	db->Close();
 	delete (IDisposable^)db;
@@ -442,6 +447,84 @@ void printBoardFromBitset(string state) {
 	board.printType();
 }
 
+void createTrainingTxt(SQLiteConnection^ db) {
+	/** Pre-handle on database **/
+	// Add column wRate
+	SQLiteCommand^ cmd = db->CreateCommand();
+	string sql = "ALTER TABLE winning_rate ADD COLUMN wRate DOUBLE;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	cmd->ExecuteNonQuery();
+	// Add column class
+	sql = "ALTER TABLE winning_rate ADD COLUMN class integer;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	cmd->ExecuteNonQuery();
+	// Delete unneccessary data
+	sql = "DELETE FROM winning_rate WHERE num < 10;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	cmd->ExecuteNonQuery();
+	// Calculate winning rate
+	sql = "UPDATE winning_rate SET wRate = (CAST(rate AS DOUBLE) / num);";
+	cmd->CommandText = gcnew String(sql.c_str());
+	cmd->ExecuteNonQuery();
+	// Set class
+	for (int c = 0; c < 10; c++) {
+		double min = c / 10.0;
+		double max = (c + 1) / 10.0;
+
+		stringstream ssSql;
+		if (max == 1.0) {
+			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate <= " << max << ";";
+		}
+		else {
+			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate < " << max << ";";
+		}
+
+		cmd->CommandText = gcnew String(ssSql.str().c_str());
+		cmd->ExecuteNonQuery();
+	}
+	/** Create TXTs **/
+	sql = "SELECT * FROM winning_rate;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	SQLiteDataReader^ reader = cmd->ExecuteReader();
+	
+	if (reader->HasRows) {
+		ofstream fTest("./txt/test.txt");
+		ofstream fTrain("./txt/train.txt");
+		ofstream fVal("./txt/val.txt");
+			
+		while (reader->Read()) {
+			// All write samples to train
+			stringstream ss;
+			ss << "W" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
+			fTrain << ss.str();
+
+			// Half of the red samples to test or val
+			if (reader->GetInt32(DBID) % 2 == 0) {
+				stringstream ss;
+				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
+				fTest << ss.str();
+			}
+			else {
+				stringstream ss;
+				ss << "R" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
+				fVal << ss.str();
+			}
+		}
+		// Finish reading
+		reader->Close();
+		// Close files
+		fTest.close();
+		fTrain.close();
+		fVal.close();
+		std::cout << "Sucessfully create TXTs\n";
+	}
+	else {
+		// Finish reading
+		reader->Close();
+		std::cout << "No result found\n";
+	}
+}
+
 void testCases() {
     /** Testing for Board **/
     Board board;
@@ -510,7 +593,8 @@ void testCases() {
 	}
 	*/
 	// Test image output
-	board.loadBoardFromString("000000000000000000000000000000000000000000000000000000000000000001110100000000000000000000000000000000000000000000000000000101001011000000000000000000000000000000000000000000000000000100110101000000000000000000000000000000000000000000000000000010010110101001000000000000000000000000000000000000000000000000000010110000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+	board.loadBoardFromString("000000000000000000000000000000000000000000000000000000000000000100010010000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+	board.printType();
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.imageOutput(whiteImage, redImage);
