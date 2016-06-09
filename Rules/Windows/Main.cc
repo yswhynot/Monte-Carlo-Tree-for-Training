@@ -24,8 +24,9 @@ typedef bitset<DIM> STATE;
 #define DBNUM 3
 
 /** Function prototypes **/
+void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo);
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
-void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
+string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
 void playRandom(SQLiteConnection^ db, int nGame);
 string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
@@ -47,7 +48,7 @@ int main() {
 	
 	//playWithAI(db, 5000, "COM18");
 
-    playRandom(db, 1);
+    //playRandom(db, 1);
 
     //readDb(db, 10);
 
@@ -56,11 +57,107 @@ int main() {
 
 	//printBoardFromBitset("000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100010010110100000000000000000000000000000000000000000000000000011001011001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
-    //testCases();
+    testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
     return 0;
+}
+
+void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo) {
+	PortChat chatOne(portOne);
+	PortChat chatTwo(portTwo);
+
+	String^ msg;
+	bool chatOneWhite = false;
+	for (int game = 1; game <= nGame; game++) {
+		Board board;
+		vector<STATE> states;
+		int winner;
+
+		// Receive from port one at the first game
+		if (game == 1) {
+			bool hasRead = false;
+			do {
+				std::cout << "Waiting for port one...\n";
+				msg = chatOne.Read(&hasRead);
+			} while (hasRead == false);
+		}
+		// Allocate color for port one
+		if (msg->Equals("-W")) {
+			chatOneWhite = true;
+		}
+		// Check if port two has the right color
+		bool hasRead = false;
+		do {
+			msg = chatTwo.Read(&hasRead);
+		} while (hasRead == false);
+		if (msg->Equals((chatOneWhite? "-B": "-W")) == false) {
+			std::cout << "Port two color invalid, interrupte at game " << game << "\n";
+			return;
+		}
+		// If port two is white, handle it first
+		if (chatOneWhite == false) {
+			bool hasRead = false;
+			int trialCnt = 0;
+			do {
+				std::cout << "Waiting for port two...\n";
+				msg = chatTwo.Read(&hasRead);
+				// Trial update
+				trialCnt++;
+				if (trialCnt >= TRIAL) {
+					std::cout << "Interrupte at game " << game << "\n";
+					return;
+				}
+			} while (hasRead == false);
+			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
+			board.updateBoardByCommand(string(msgChr), &winner);
+			states.push_back(board.getBoardBitset());
+			// Send to port one
+			chatOne.Write(msg);
+		}
+		/** Ordinary procedures **/
+		do {
+			// Listen from port one
+			bool hasRead = false;
+			int trialCnt = 0;
+			do {
+				msg = chatOne.Read(&hasRead);
+				// Trial update
+				trialCnt++;
+				if (trialCnt >= TRIAL) {
+					std::cout << "Interrupte at game " << game << "\n";
+					return;
+				}
+			} while (hasRead == false);
+			// Check if port one win the game
+			if (msg->Equals("-W") || msg->Equals("-B")) {
+				String^ cmd = gcnew String(checkAllWinLose(db, &board, &states, game, chatOneWhite).c_str());
+				// Send to port two
+				chatTwo.Write(cmd);
+				break; /* do */
+			}
+			// Listen from port two
+			hasRead = false;
+			trialCnt = 0;
+			do {
+				msg = chatTwo.Read(&hasRead);
+				// Trial update
+				trialCnt++;
+				if (trialCnt >= TRIAL) {
+					std::cout << "Interrupte at game " << game << "\n";
+					return;
+				}
+			} while (hasRead == false);
+			// Check if port one win the game
+			if (msg->Equals("-W") || msg->Equals("-B")) {
+				String^ cmd = gcnew String(checkAllWinLose(db, &board, &states, game, !chatOneWhite).c_str());
+				// Send to port one
+				chatOne.Write(cmd);
+				break; /* do */
+			}
+		} while (true);
+	}
 }
 
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
@@ -155,13 +252,15 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 }
 
 
-void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite) {
+string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite) {
 	int pos[TILENUM][4];
 	int posCnt;
 	int choiceCnt;
 	board->getValidPos(pos, &posCnt, &choiceCnt);
 
 	int endIndex = 1;
+
+	string ret; // Return one of the last step of winning game
 
 	for (int pp = 0; pp < posCnt; pp++) {
 		for (int cc = 1; cc <= 3; cc++) {
@@ -189,10 +288,13 @@ void checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, 
 						}
 						endIndex++;
 					}
+					// Update ret
+					ret = tempBoard.getCmds().back();
 				}
 			}
 		}
 	}
+	return ret;
 }
 
 void playRandom(SQLiteConnection^ db, int nGame) {
@@ -514,6 +616,6 @@ void testCases() {
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.imageOutput(whiteImage, redImage);
-	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
+	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
     return;
 }
