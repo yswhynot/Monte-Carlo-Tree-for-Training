@@ -1327,6 +1327,11 @@ TileInfo* Board::getTileInfos(bool white) {
 	int paths[ALLDIM];
 	this->getPathsFromBitset(paths);
 
+	// Reset all valid value
+	for (int i = 0; i < TILENUM; i++) {
+		this->m_tileInfos[i].valid = false;
+	}
+
     for (int row = 0; row < BOARDWIDTH; row++) {
         for (int col = 0; col < BOARDWIDTH; col++) {
             int bitStart = (row * BOARDWIDTH + col) * 3;
@@ -1336,6 +1341,9 @@ TileInfo* Board::getTileInfos(bool white) {
                 this->m_tileInfos[row * BOARDWIDTH + col].valid = false;
                 continue;
             }
+
+			// If a cell has been checked, continue to next loop
+			if (this->m_tileInfos[row * BOARDWIDTH + col].valid) continue;
 
             int bit = (row * BOARDWIDTH + col) * 4;
             for (int i = 0; i < 4; i++) {
@@ -1375,7 +1383,7 @@ TileInfo* Board::getTileInfos(bool white) {
 					this->m_tileInfos[row * BOARDWIDTH + col].attack = false;
 					// Win by line
 					if (this->m_tileInfos[row * BOARDWIDTH + col].angle == 2) {
-						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == LINEGAP) || (abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == LINEGAP)) {
+						if ((abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaCol) == LINEGAP - 1) || (abs(this->m_tileInfos[row * BOARDWIDTH + col].deltaRow) == LINEGAP - 1)) {
 							this->m_tileInfos[row * BOARDWIDTH + col].attack = true;
 						}
 					}
@@ -1672,7 +1680,7 @@ TileInfo* Board::getTileInfos(bool white) {
 					// Update the endPoint field after all the operations
 					this->m_tileInfos[row * BOARDWIDTH + col].endPoint = true;
                     break;
-                }
+				}
             }
         }
     }
