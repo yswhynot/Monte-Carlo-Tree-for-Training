@@ -110,6 +110,7 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 					return;
 				}
 			} while (hasRead == false);
+			// Update board
 			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
 			board.updateBoardByCommand(string(msgChr), &winner);
 			states.push_back(board.getBoardBitset());
@@ -137,6 +138,12 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 				chatTwo.Write(cmd);
 				break; /* do */
 			}
+			// Else, update board
+			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
+			board.updateBoardByCommand(string(msgChr), &winner);
+			states.push_back(board.getBoardBitset());
+			// Send to port two
+			chatTwo.Write(msg);
 			// Listen from port two
 			hasRead = false;
 			trialCnt = 0;
@@ -156,6 +163,12 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 				chatOne.Write(cmd);
 				break; /* do */
 			}
+			// Else, update board
+			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
+			board.updateBoardByCommand(string(msgChr), &winner);
+			states.push_back(board.getBoardBitset());
+			// Send to port one
+			chatOne.Write(msg);
 		} while (true);
 	}
 }
@@ -235,12 +248,12 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 
 		/** Update database **/
 		if (updateDb(db, (winner == 1) ? true : false, board, states)) {
-			std::cout << "Successfully record game " << game << "\n";
+			//std::cout << "Successfully record game " << game << "\n";
 			// Write trx
 			stringstream ss;
 			ss << "./game/" << game << ".trx";
 			if (writeTrx(board, ss.str())) {
-				std::cout << "Successfully create " << game << ".trx\n";
+				//std::cout << "Successfully create " << game << ".trx\n";
 				continue;
 			}
 		}
@@ -262,6 +275,8 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 
 	string ret; // Return one of the last step of winning game
 
+	bool record = false;
+
 	for (int pp = 0; pp < posCnt; pp++) {
 		for (int cc = 1; cc <= 3; cc++) {
 			if (pos[pp][cc] == 1) {
@@ -279,14 +294,16 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 					vector<STATE> tempStates = *states;
 					tempStates.push_back(tempBoard.getBoardBitset());
 					if (updateDb(db, (winner == 1) ? true : false, tempBoard, tempStates)) {
-						std::cout << "Successfully record game " << gameIndex << ", possible ending " << endIndex << "\n";
+						//std::cout << "Successfully record game " << gameIndex << ", possible ending " << endIndex << "\n";
 						// Write trx
 						stringstream ss;
 						ss << "./game/" << gameIndex << "_" << endIndex << ".trx";
 						if (writeTrx(tempBoard, ss.str())) {
-							std::cout << "Successfully create " << gameIndex << "_" << endIndex << ".trx\n";
+							//std::cout << "Successfully create " << gameIndex << "_" << endIndex << ".trx\n";
 						}
 						endIndex++;
+
+						record = true;
 					}
 					// Update ret
 					ret = tempBoard.getCmds().back();
@@ -294,6 +311,16 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 			}
 		}
 	}
+
+	if (record == false) {
+		std::cout << "No possible ending for game " << gameIndex << endl;
+		// Write trx
+		stringstream ss;
+		stringstream ss;
+		ss << "./game/" << gameIndex << ".trx";
+		writeTrx(*board, ss.str());
+	}
+
 	return ret;
 }
 
