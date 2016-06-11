@@ -60,7 +60,7 @@ int main() {
 
     //readDb(db, 10);
 
-	createTrainingTxt(db);
+	//createTrainingTxt(db); // Use it to convert the database. Please backup the database before executing it and make sure it is the original database
 
 	db->Close();
 	delete (IDisposable^)db;
