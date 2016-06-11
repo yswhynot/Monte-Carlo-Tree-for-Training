@@ -305,7 +305,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = posOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -336,7 +336,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -352,10 +352,60 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[bottomPathPos] = 0;
                     }
                 } else if (topFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[topPathPos + 2] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 0) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = row - otherRow;
+						bool rowSpan = (row >= this->m_tempMaxRow) && (otherRow <= 1);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 3;
                     this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[topPathPos + 2];
                     this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (bottomFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[bottomPathPos] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minRow;
+					if (row == 0) {
+						minRow = 0;
+					}
+					else {
+						minRow = 1;
+					}
+
+					if (otherEdge == 2) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = otherRow - row;
+						bool rowSpan = (otherRow >= this->m_tempMaxRow) && (row <= minRow);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(row * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 1;
                     this->m_tempPaths[pos * 4] = this->m_tempPaths[bottomPathPos];
                     this->m_tempPaths[bottomPathPos] = 0;
@@ -406,7 +456,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = rowOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -437,7 +487,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -453,10 +503,60 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (leftFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[leftPathPos + 3] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 1) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = col - otherCol;
+						bool colSpan = (col >= this->m_tempMaxCol) && (otherCol <= 1);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 4;
                     this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[leftPathPos + 3];
                     this->m_tempPaths[leftPathPos + 3] = 0;
                 } else if (rightFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[rightPathPos + 1] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minCol;
+					if (col == 0) {
+						minCol = 0;
+					}
+					else {
+						minCol = 1;
+					}
+
+					if (otherEdge == 3) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = otherCol - col;
+						bool colSpan = (otherCol >= this->m_tempMaxCol) && (col <= minCol);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 2;
                     this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[rightPathPos + 1];
                     this->m_tempPaths[rightPathPos + 1] = 0;
@@ -552,7 +652,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = rowOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -583,7 +683,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -599,10 +699,60 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (topFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[topPathPos + 2] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 1) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = col - otherCol;
+						bool colSpan = (col >= this->m_tempMaxCol) && (otherCol <= 1);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 4;
                     this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[topPathPos + 2];
                     this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (rightFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[rightPathPos + 1] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minRow;
+					if (row == 0) {
+						minRow = 0;
+					}
+					else {
+						minRow = 1;
+					}
+
+					if (otherEdge == 2) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = otherRow - row;
+						bool rowSpan = (otherRow >= this->m_tempMaxRow) && (row <= minRow);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(row * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 1;
                     this->m_tempPaths[pos * 4] = this->m_tempPaths[rightPathPos + 1];
                     this->m_tempPaths[rightPathPos + 1] = 0;
@@ -653,7 +803,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = rowOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -684,7 +834,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -700,10 +850,60 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[bottomPathPos] = 0;
                     }
                 } else if (leftFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[leftPathPos + 3] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 0) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = row - otherRow;
+						bool rowSpan = (row >= this->m_tempMaxRow) && (otherRow <= 1);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 3;
                     this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[leftPathPos + 3];
                     this->m_tempPaths[leftPathPos + 3] = 0;
                 } else if (bottomFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[bottomPathPos] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minCol;
+					if (col == 0) {
+						minCol = 0;
+					}
+					else {
+						minCol = 1;
+					}
+
+					if (otherEdge == 3) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = otherCol - col;
+						bool colSpan = (otherCol >= this->m_tempMaxCol) && (col <= minCol);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 2;
                     this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[bottomPathPos];
                     this->m_tempPaths[bottomPathPos] = 0;
@@ -799,7 +999,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = rowOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -830,7 +1030,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -846,10 +1046,68 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[leftPathPos + 3] = 0;
                     }
                 } else if (topFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[topPathPos + 2] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minCol;
+					if (col == 0) {
+						minCol = 0;
+					}
+					else {
+						minCol = 1;
+					}
+
+					if (otherEdge == 3) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = otherCol - col;
+						bool colSpan = (otherCol >= this->m_tempMaxCol) && (col <= minCol);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[topPathPos + 2] - 1] = pos * 4 + 2;
                     this->m_tempPaths[pos * 4 + 1] = this->m_tempPaths[topPathPos + 2];
                     this->m_tempPaths[topPathPos + 2] = 0;
                 } else if (leftFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[leftPathPos + 3] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					int minRow;
+					if (row == 0) {
+						minRow = 0;
+					}
+					else {
+						minRow = 1;
+					}
+
+					if (otherEdge == 2) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = otherRow - row;
+						bool rowSpan = (otherRow >= this->m_tempMaxRow) && (row <= minRow);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(row * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[leftPathPos + 3] - 1] = pos * 4 + 1;
                     this->m_tempPaths[pos * 4] = this->m_tempPaths[leftPathPos + 3];
                     this->m_tempPaths[leftPathPos + 3] = 0;
@@ -900,7 +1158,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
                                 checkPos = rowOne;
                             }
-                            if (rowSpan && rowGap >= LINEGAP) {
+                            if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
                                     this->m_winner = 2;
@@ -931,7 +1189,7 @@ bool Board::singleTileUpdate(int pos, char type) {
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
                                 checkPos = colOne;
                             }
-                            if (colSpan && colGap >= LINEGAP) {
+                            if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
                                     this->m_winner = 2;
@@ -947,10 +1205,52 @@ bool Board::singleTileUpdate(int pos, char type) {
                         this->m_tempPaths[rightPathPos + 1] = 0;
                     }
                 } else if (bottomFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[bottomPathPos] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 1) {
+						int otherCol = otherPos % BOARDWIDTH;
+						int colGap = col - otherCol;
+						bool colSpan = (col >= this->m_tempMaxCol) && (otherCol <= 1);
+
+						if (colSpan && colGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[bottomPathPos] - 1] = pos * 4 + 4;
                     this->m_tempPaths[pos * 4 + 3] = this->m_tempPaths[bottomPathPos];
                     this->m_tempPaths[bottomPathPos] = 0;
                 } else if (rightFlag) {
+					// Check if win by line
+					int otherEndpoint = this->m_tempPaths[rightPathPos + 1] - 1;
+					int otherEdge = otherEndpoint % 4;
+					int otherPos = otherEndpoint / 4;
+
+					if (otherEdge == 0) {
+						int otherRow = otherPos / BOARDWIDTH;
+						int rowGap = row - otherRow;
+						bool rowSpan = (row >= this->m_tempMaxRow) && (otherRow <= 1);
+
+						if (rowSpan && rowGap + 1 >= LINEGAP) {
+							// Game wins, check winner
+							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+								this->m_winner = 2;
+							}
+							else {
+								this->m_winner = 1;
+							}
+						}
+					}
+					// Update paths
                     this->m_tempPaths[this->m_tempPaths[rightPathPos + 1] - 1] = pos * 4 + 3;
                     this->m_tempPaths[pos * 4 + 2] = this->m_tempPaths[rightPathPos + 1];
                     this->m_tempPaths[rightPathPos + 1] = 0;
