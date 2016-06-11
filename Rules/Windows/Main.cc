@@ -16,6 +16,7 @@ using namespace System;
 using namespace System::Data::SQLite;
 
 typedef bitset<DIM> STATE;
+
 #define TRIAL 5
 
 #define DBID 0
@@ -36,7 +37,8 @@ void printStates(vector<STATE> states);
 void printState(STATE state);
 bool readDb(SQLiteConnection^ db, int num);
 bool writeTrx(Board board, string filename);
-void saveImage(Board board, STATE state, string filenameWhite, string filenameRed);
+void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
+void saveMixedImage(Board board, STATE state, string filename);
 void printBoardFromBitset(string state);
 void testCases();
 
@@ -46,7 +48,7 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	//playWithAI(db, 5000, "COM18");
+	playWithAI(db, 5000, "COM18");
 
     //playRandom(db, 1);
 
@@ -57,7 +59,7 @@ int main() {
 
 	//printBoardFromBitset("000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100010010110100000000000000000000000000000000000000000000000000011001011001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
-    testCases();
+    //testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -164,7 +166,7 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 				break; /* do */
 			}
 			// Else, update board
-			char* msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
+			msgChr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(msg);
 			board.updateBoardByCommand(string(msgChr), &winner);
 			states.push_back(board.getBoardBitset());
 			// Send to port one
@@ -174,6 +176,8 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 }
 
 void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
+	std::cout << "Start playing...\n";
+
 	PortChat portChat(portName);
 
 	String^ msg;
@@ -315,7 +319,6 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 	if (record == false) {
 		std::cout << "No possible ending for game " << gameIndex << endl;
 		// Write trx
-		stringstream ss;
 		stringstream ss;
 		ss << "./game/" << gameIndex << ".trx";
 		writeTrx(*board, ss.str());
@@ -472,12 +475,12 @@ bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states)
 				int id = reader->GetInt32(0);
 				reader->Close();
 				stringstream ssWhite;
-				ssWhite << "./image/W" << id << ".jpeg";
+				ssWhite << "./image/W" << id << ".bmp";
 				string filenameWhite = ssWhite.str();
 				stringstream ssRed;
-				ssRed << "./image/R" << id << ".jpeg";
+				ssRed << "./image/R" << id << ".bmp";
 				string filenameRed = ssRed.str();
-				saveImage(board, states[s], filenameWhite, filenameRed);
+				saveSeperateImages(board, states[s], filenameWhite, filenameRed);
 			}
 		}
 		tx->Commit();
@@ -556,13 +559,32 @@ bool writeTrx(Board board, string filename) {
     return true;
 }
 
-void saveImage(Board board, STATE state, string filenameWhite, string filenameRed) {
+void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed) {
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.loadBoardFromString(bitsetToString(state));
 	board.imageOutput(whiteImage, redImage);
 	cv::imwrite(filenameWhite, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
 	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
+}
+
+void saveMixedImage(Board board, STATE state, string filename) {
+	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
+	board.loadBoardFromString(bitsetToString(state));
+	board.imageOutput(whiteImage, redImage);
+	// Create channels
+	cv::Mat B = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage);
+	cv::Mat G = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage);
+	cv::Mat R = cv::Mat::zeros(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1);
+	vector<cv::Mat> channels;
+	channels.push_back(B);
+	channels.push_back(G);
+	channels.push_back(R);
+	cv::Mat img;
+	cv::merge(channels, img);
+
+	cv::imwrite(filename, img);
 }
 
 void printBoardFromBitset(string state) {
@@ -643,6 +665,17 @@ void testCases() {
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.imageOutput(whiteImage, redImage);
-	cv::imwrite("test.jpeg", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
+	cv::Mat B = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage);
+	cv::Mat G = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage);
+	cv::Mat R = cv::Mat::zeros(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1);
+	vector<cv::Mat> channels;
+	channels.push_back(B);
+	channels.push_back(G);
+	channels.push_back(R);
+	cv::Mat img;
+	cv::merge(channels, img);
+	cv::imwrite("white.bmp", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
+	cv::imwrite("red.bmp", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
+	cv::imwrite("mix.bmp", img);
     return;
 }
