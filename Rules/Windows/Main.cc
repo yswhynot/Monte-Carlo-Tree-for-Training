@@ -41,7 +41,7 @@ string bitsetToString(STATE state);
 void printStates(vector<STATE> states);
 void printState(STATE state);
 bool readDb(SQLiteConnection^ db, int num);
-bool writeTrx(Board board, string filename);
+bool writeTrx(Board board, string filename, string players = "");
 void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
 void saveMixedImage(Board board, STATE state, string filename);
 void printBoardFromBitset(string state);
@@ -54,7 +54,7 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	playWithAI(db, 5000, "COM18");
+	//playWithAI(db, 5000, "COM18");
 
     //playRandom(db, 1);
 
@@ -67,7 +67,7 @@ int main() {
 
 	//printBoardFromBitset("000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100010010110100000000000000000000000000000000000000000000000000011001011001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
-    //testCases();
+    testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -264,7 +264,7 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 			// Write trx
 			stringstream ss;
 			ss << "./game/" << game << ".trx";
-			if (writeTrx(board, ss.str())) {
+			if (writeTrx(board, ss.str(), (AIWhite? "AI vs Random": "Random vs AI"))) {
 				//std::cout << "Successfully create " << game << ".trx\n";
 				continue;
 			}
@@ -310,7 +310,7 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 						// Write trx
 						stringstream ss;
 						ss << "./game/" << gameIndex << "_" << endIndex << ".trx";
-						if (writeTrx(tempBoard, ss.str())) {
+						if (writeTrx(tempBoard, ss.str(), (AIWhite ? "AI vs Random" : "Random vs AI"))) {
 							//std::cout << "Successfully create " << gameIndex << "_" << endIndex << ".trx\n";
 						}
 						endIndex++;
@@ -551,14 +551,14 @@ bool readDb(SQLiteConnection^ db, int num) {
 	return true;
 }
 
-bool writeTrx(Board board, string filename) {
+bool writeTrx(Board board, string filename, string players) {
     ofstream ff(filename.c_str());
     if (!ff) {
         std::cout << "Cannot create " << filename << endl;
         return false;
     }
     ff << "Trax" << endl;
-    ff << "White vs Red" << endl;
+    ff << ((players == "")? "White vs Red": players) << endl;
     vector<string> cmds = board.getCmds();
     for (int i = 0; i < cmds.size(); i ++) {
         ff << cmds[i] << " ";
@@ -722,7 +722,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0/ A0/ A3+ A4\\ B3/ B1+ A0/ @2/ A5\\ D2/ E1\\ B6+ @6/"));
+    winner = board.updateBoardByCommands(string("@0+ @1+ @1+ @1+ B0\\ B3\\ B0\\ D2+ A4+ E2+ @3+ A2+ G2+ H2+"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list
@@ -733,7 +733,7 @@ void testCases() {
 	std::cout << endl;
     // Test check valid positions
     board.reset();
-    winner = board.updateBoardByCommands(string("@0/ A2\\ A3+ B3+ C3/ C2/"));
+    winner = board.updateBoardByCommands(string("@0/ A2\\ B2\\ B3+ B4/ C4+ B5+ @3\\ B5+ B0/ B0+ @6+"));
     board.printType();
     int pos[TILENUM][4];
     int posCnt;
