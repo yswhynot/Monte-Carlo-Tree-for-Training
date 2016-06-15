@@ -7,8 +7,8 @@ using namespace System::Threading;
 public ref class PortChat
 {
 private:
-	static bool _continue;
-	static SerialPort^ _serialPort;
+	bool _continue;
+	SerialPort^ _serialPort;
 
 public:
 	PortChat(String^ portName)

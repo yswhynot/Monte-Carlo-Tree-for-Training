@@ -364,7 +364,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -397,7 +397,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(row * 3)) {
+							if (this->m_tempBoardBitset.test(pos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -515,7 +515,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -548,7 +548,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -711,7 +711,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -744,7 +744,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(row * 3)) {
+							if (this->m_tempBoardBitset.test(pos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -862,7 +862,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -895,7 +895,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1066,7 +1066,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(col * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(pos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1099,7 +1099,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(row * 3)) {
+							if (this->m_tempBoardBitset.test(pos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1217,7 +1217,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherCol * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 2)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1242,7 +1242,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherRow * 3)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 2)) {
 								this->m_winner = 2;
 							}
 							else {
