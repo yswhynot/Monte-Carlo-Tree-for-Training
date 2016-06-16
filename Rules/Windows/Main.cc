@@ -838,7 +838,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0/ A0/ @2+ A3+ C1+ B0+ A0/ @1+ @2/ C0/ @3/ D0+ D8/ C8/"));
+    winner = board.updateBoardByCommands(string("@0+ B1+ @1/ B0\\ A0/ @2+ E3+ E2+ @2\\ A0+ B0+ @4\\ H4/ H3/"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list

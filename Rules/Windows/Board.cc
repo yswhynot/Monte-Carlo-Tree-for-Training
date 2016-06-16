@@ -330,11 +330,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -450,11 +450,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowOne > rowTwo) {
                                 rowGap = rowOne - rowTwo;
                                 rowSpan = (rowOne >= this->m_tempMaxRow) && (rowTwo <= minRow);
-                                checkPos = rowTwo;
+                                checkPos = posTwo;
                             } else {
                                 rowGap = rowTwo - rowOne;
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
-                                checkPos = rowOne;
+                                checkPos = posOne;
                             }
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -481,11 +481,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -646,11 +646,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowOne > rowTwo) {
                                 rowGap = rowOne - rowTwo;
                                 rowSpan = (rowOne >= this->m_tempMaxRow) && (rowTwo <= minRow);
-                                checkPos = rowTwo;
+                                checkPos = posTwo;
                             } else {
                                 rowGap = rowTwo - rowOne;
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
-                                checkPos = rowOne;
+                                checkPos = posOne;
                             }
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -677,11 +677,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -711,7 +711,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherPos * 3)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -797,11 +797,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowOne > rowTwo) {
                                 rowGap = rowOne - rowTwo;
                                 rowSpan = (rowOne >= this->m_tempMaxRow) && (rowTwo <= minRow);
-                                checkPos = rowTwo;
+                                checkPos = posTwo;
                             } else {
                                 rowGap = rowTwo - rowOne;
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
-                                checkPos = rowOne;
+                                checkPos = posOne;
                             }
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -828,11 +828,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -862,7 +862,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -993,11 +993,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowOne > rowTwo) {
                                 rowGap = rowOne - rowTwo;
                                 rowSpan = (rowOne >= this->m_tempMaxRow) && (rowTwo <= minRow);
-                                checkPos = rowTwo;
+                                checkPos = posTwo;
                             } else {
                                 rowGap = rowTwo - rowOne;
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
-                                checkPos = rowOne;
+                                checkPos = posOne;
                             }
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -1024,11 +1024,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -1066,7 +1066,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(pos * 3)) {
+							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1152,11 +1152,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowOne > rowTwo) {
                                 rowGap = rowOne - rowTwo;
                                 rowSpan = (rowOne >= this->m_tempMaxRow) && (rowTwo <= minRow);
-                                checkPos = rowTwo;
+                                checkPos = posTwo;
                             } else {
                                 rowGap = rowTwo - rowOne;
                                 rowSpan = (rowTwo >= this->m_tempMaxRow) && (rowOne <= minRow);
-                                checkPos = rowOne;
+                                checkPos = posOne;
                             }
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -1183,11 +1183,11 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colOne > colTwo) {
                                 colGap = colOne - colTwo;
                                 colSpan = (colOne >= this->m_tempMaxCol) && (colTwo <= minCol);
-                                checkPos = colTwo;
+                                checkPos = posTwo;
                             } else {
                                 colGap = colTwo - colOne;
                                 colSpan = (colTwo >= this->m_tempMaxCol) && (colOne <= minCol);
-                                checkPos = colOne;
+                                checkPos = posOne;
                             }
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
@@ -1217,7 +1217,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherPos * 3 + 2)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
 								this->m_winner = 2;
 							}
 							else {
@@ -1242,7 +1242,7 @@ bool Board::singleTileUpdate(int pos, char type) {
 
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
-							if (this->m_tempBoardBitset.test(otherPos * 3 + 2)) {
+							if (this->m_tempBoardBitset.test(otherPos * 3)) {
 								this->m_winner = 2;
 							}
 							else {
