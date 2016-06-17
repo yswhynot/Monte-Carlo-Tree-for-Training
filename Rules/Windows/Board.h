@@ -31,6 +31,8 @@ public:
 	void boardConverter(bool* white, bool* red);
 	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed);
 	void loadBoardFromString(string state);
+	void clockwise();
+	void flip();
 private:
     /** member functions **/
     bool forcePlay(int pos);

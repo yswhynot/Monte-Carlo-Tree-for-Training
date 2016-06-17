@@ -2069,6 +2069,8 @@ void Board::getPathsFromBitset(int paths[ALLDIM]) {
     for (int i = 0; i < ALLDIM; i++) {
         paths[i] = 0;
     }
+	// Pre-handle
+	this->m_tempBoardBitset = this->m_boardBitset;
 
     for (int row = 0; row < BOARDWIDTH; row++) {
         for (int col = 0; col < BOARDWIDTH; col++) {
@@ -2522,6 +2524,7 @@ void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed) {
 }
 
 void Board::loadBoardFromString(string state) {
+	// Load board
 	bitset<DIM> stateBitset;
 	for (int bit = 0; bit < DIM; bit++) {
 		if ((state[bit] - '0') == 0) {
@@ -2532,4 +2535,83 @@ void Board::loadBoardFromString(string state) {
 		}
 	}
 	this->m_boardBitset = stateBitset;
+	// Load max row and col
+	this->m_maxRow = 0;
+	this->m_maxCol = 0;
+	for (int c = 0; c < BOARDWIDTH; c++) {
+		for (int r = 0; r < BOARDWIDTH; r++) {
+			int bitStart = (r * BOARDWIDTH + c) * 3;
+			if (this->m_boardBitset.test(bitStart) || this->m_boardBitset.test(bitStart + 1) ||
+				this->m_boardBitset.test(bitStart + 2)) {
+				if (r >= this->m_maxRow) {
+					this->m_maxRow = r;
+				}
+				if (c >= this->m_maxCol) {
+					this->m_maxCol = c;
+				}
+			}
+		}
+	}
+	// Load path
+	int paths[ALLDIM];
+	this->getPathsFromBitset(paths);
+	for (int i = 0; i < ALLDIM; i++) {
+		this->m_paths[i] = paths[i];
+	}
+}
+
+void Board::clockwise() {
+	// Initialization
+	bitset<DIM> tempBoardBitset;
+	tempBoardBitset.reset();
+	this->m_tempMaxRow = this->m_maxCol;
+	this->m_tempMaxCol = this->m_maxRow;
+	// Pre-handle
+	this->m_tempBoardBitset = this->m_boardBitset;
+	// Operation
+	for (int r = 1; r <= this->m_maxRow; r++) {
+		for (int c = 1; c <= this->m_maxCol; c++) {
+			int oriBitstart = (r * BOARDWIDTH + c) * 3;
+			int finBitstart = (c * BOARDWIDTH + (this->m_maxRow - r + 1)) * 3;
+			tempBoardBitset[finBitstart] = this->m_boardBitset[oriBitstart + 1];
+			tempBoardBitset[finBitstart + 1] = this->m_boardBitset[oriBitstart + 2];
+			tempBoardBitset[finBitstart + 2] = this->m_boardBitset[oriBitstart + this->getRightEdge(oriBitstart)];
+			
+		}
+	}
+	// Set
+	this->m_boardBitset = tempBoardBitset;
+	this->m_maxRow = this->m_tempMaxRow;
+	this->m_maxCol = this->m_tempMaxCol;
+	int paths[ALLDIM];
+	this->getPathsFromBitset(paths);
+	for (int i = 0; i < ALLDIM; i++) {
+		this->m_paths[i] = paths[i];
+	}
+}
+
+void Board::flip() {
+	// Initialization
+	bitset<DIM> tempBoardBitset;
+	tempBoardBitset.reset();
+	// Pre-handle
+	this->m_tempBoardBitset = this->m_boardBitset;
+	// Operation
+	for (int r = 1; r <= this->m_maxRow; r++) {
+		for (int c = 1; c <= this->m_maxCol; c++) {
+			int oriBitstart = (r * BOARDWIDTH + c) * 3;
+			int finBitstart = ((this->m_maxRow - r + 1) * BOARDWIDTH + c) * 3;
+			tempBoardBitset[finBitstart] = this->m_boardBitset[oriBitstart + 2];
+			tempBoardBitset[finBitstart + 1] = this->m_boardBitset[oriBitstart + 1];
+			tempBoardBitset[finBitstart + 2] = this->m_boardBitset[oriBitstart];
+
+		}
+	}
+	// Set
+	this->m_boardBitset = tempBoardBitset;
+	int paths[ALLDIM];
+	this->getPathsFromBitset(paths);
+	for (int i = 0; i < ALLDIM; i++) {
+		this->m_paths[i] = paths[i];
+	}
 }

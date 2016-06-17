@@ -36,7 +36,8 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 void playRandom(SQLiteConnection^ db, int nGame);
 string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
-bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states);
+bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states, bool allVariations = true);
+void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state);
 string bitsetToString(STATE state);
 void printStates(vector<STATE> states);
 void printState(STATE state);
@@ -55,11 +56,11 @@ int main() {
 	db->ConnectionString = "Data Source = trax.db";
 	db->Open();
 	
-	playByAI(db, 1000, "COM18", "COM24");
+	//playByAI(db, 1000, "COM18", "COM24");
 
 	//playWithAI(db, 5000, "COM18");
 
-    //playRandom(db, 1);
+    playRandom(db, 1);
 
     //readDb(db, 10);
 
@@ -476,57 +477,42 @@ void printState(STATE state) {
     std::cout << "\n";
 }
 
-bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states) {
+bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states, bool allVariations) {
 	SQLiteCommand^ cmd = db->CreateCommand();
 	SQLiteTransaction^ tx = db->BeginTransaction();
 	cmd->Transaction = tx;
 
 	try {
 		for (int s = 0; s < states.size(); s++) {
-			// Check if record exists
-			string sql = "SELECT * FROM winning_rate WHERE board = '" + bitsetToString(states[s]) + "';";
-			cmd->CommandText = gcnew String(sql.c_str());
-			SQLiteDataReader^ reader = cmd->ExecuteReader();
-			if (reader->HasRows) {
-				reader->Read();
-				int rate = reader->GetInt32(DBRATE) + (win ? 1 : 0);
-				int num = reader->GetInt32(DBNUM) + 1;
-				// Finish reading
-				reader->Close();
-
-				stringstream ssRate;
-				ssRate << rate;
-				stringstream ssNum;
-				ssNum << num;
-				sql = "UPDATE winning_rate SET rate =" + ssRate.str() + ", num =" + ssNum.str() + " WHERE board = '" + bitsetToString(states[s]) + "';";
-				cmd->CommandText = gcnew String(sql.c_str());
-				cmd->ExecuteNonQuery();
+			if (allVariations == false) {
+				updateDbSingle(cmd, win, board, states[s]);
 			}
 			else {
-				// Finish reading
-				reader->Close();
-				// Insert new data
-				sql = "INSERT INTO winning_rate VALUES (NULL, '" + bitsetToString(states[s]) + "'," + (win ? "1" : "0") + ",1);";
-				cmd->CommandText = gcnew String(sql.c_str());
-				cmd->ExecuteNonQuery();
-				// Save a new image
-				sql = "SELECT id FROM winning_rate WHERE board = '" + bitsetToString(states[s]) + "';";
-				cmd->CommandText = gcnew String(sql.c_str());
-				reader = cmd->ExecuteReader();
-				reader->Read();
-				int id = reader->GetInt32(0);
-				reader->Close();
-				/*stringstream ssWhite;
-				ssWhite << "./image/W" << id << ".bmp";
-				string filenameWhite = ssWhite.str();
-				stringstream ssRed;
-				ssRed << "./image/R" << id << ".bmp";
-				string filenameRed = ssRed.str();
-				saveSeperateImages(board, states[s], filenameWhite, filenameRed);*/
-				stringstream ssMixed;
-				ssMixed << "./image/M" << id << ".bmp";
-				string filenameMixed = ssMixed.str();
-				saveMixedImage(board, states[s], filenameMixed);
+				// Original
+				updateDbSingle(cmd, win, board, states[s]);
+				// Original with 90 degree clockwise turn
+				board.loadBoardFromString(bitsetToString(states[s]));
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Original with 180 degree clockwise turn
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Original with 270 degree clockwise turn
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Flip
+				board.clockwise();
+				board.flip();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Flip with 90 degree clockwise turn
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Flip with 180 degree clockwise turn
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
+				// Flip with 270 degree clockwise turn
+				board.clockwise();
+				updateDbSingle(cmd, win, board, board.getBoardBitset());
 			}
 		}
 		tx->Commit();
@@ -536,6 +522,54 @@ bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states)
 		std::cout << "Fail to commit\n";
 		tx->Rollback();
 		return false;
+	}
+}
+
+void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state) {
+	// Check if record exists
+	string sql = "SELECT * FROM winning_rate WHERE board = '" + bitsetToString(state) + "';";
+	cmd->CommandText = gcnew String(sql.c_str());
+	SQLiteDataReader^ reader = cmd->ExecuteReader();
+	if (reader->HasRows) {
+		reader->Read();
+		int rate = reader->GetInt32(DBRATE) + (win ? 1 : 0);
+		int num = reader->GetInt32(DBNUM) + 1;
+		// Finish reading
+		reader->Close();
+
+		stringstream ssRate;
+		ssRate << rate;
+		stringstream ssNum;
+		ssNum << num;
+		sql = "UPDATE winning_rate SET rate =" + ssRate.str() + ", num =" + ssNum.str() + " WHERE board = '" + bitsetToString(state) + "';";
+		cmd->CommandText = gcnew String(sql.c_str());
+		cmd->ExecuteNonQuery();
+	}
+	else {
+		// Finish reading
+		reader->Close();
+		// Insert new data
+		sql = "INSERT INTO winning_rate VALUES (NULL, '" + bitsetToString(state) + "'," + (win ? "1" : "0") + ",1);";
+		cmd->CommandText = gcnew String(sql.c_str());
+		cmd->ExecuteNonQuery();
+		// Save a new image
+		sql = "SELECT id FROM winning_rate WHERE board = '" + bitsetToString(state) + "';";
+		cmd->CommandText = gcnew String(sql.c_str());
+		reader = cmd->ExecuteReader();
+		reader->Read();
+		int id = reader->GetInt32(0);
+		reader->Close();
+		/*stringstream ssWhite;
+		ssWhite << "./image/W" << id << ".bmp";
+		string filenameWhite = ssWhite.str();
+		stringstream ssRed;
+		ssRed << "./image/R" << id << ".bmp";
+		string filenameRed = ssRed.str();
+		saveSeperateImages(board, states[s], filenameWhite, filenameRed);*/
+		stringstream ssMixed;
+		ssMixed << "./image/M" << id << ".bmp";
+		string filenameMixed = ssMixed.str();
+		saveMixedImage(board, state, filenameMixed);
 	}
 }
 
@@ -885,6 +919,7 @@ void testCases() {
 	bool white[OUTPUTWIDTH * OUTPUTWIDTH];
 	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.boardConverter(white, red);
+	/*
 	for (int row = 0; row < OUTPUTWIDTH; row++) {
 		for (int col = 0; col < OUTPUTWIDTH; col++) {
 			std::cout << white[row * OUTPUTWIDTH + col] << " ";
@@ -892,6 +927,7 @@ void testCases() {
 		std::cout << endl;
 	}
 	std::cout << endl;
+	*/
 	/*
 	for (int row = 0; row < OUTPUTWIDTH; row++) {
 		for (int col = 0; col < OUTPUTWIDTH; col++) {
@@ -901,7 +937,7 @@ void testCases() {
 	}
 	*/
 	// Test image output
-	board.loadBoardFromString("000000000000000000000000000000000000000000000000000000000000000100010010000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+	board.loadBoardFromString("000000000000000000000000000000000000000000000000000000000000000001110100000000000000000000000000000000000000000000000000000110001011000000000000000000000000000000000000000000000000000000110100000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 	board.printType();
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
@@ -918,5 +954,10 @@ void testCases() {
 	cv::imwrite("white.bmp", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
 	cv::imwrite("red.bmp", cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
 	cv::imwrite("mix.bmp", img);
+	// Test clockwise and flip
+	board.clockwise();
+	board.printType();
+	board.flip();
+	board.printType();
     return;
 }
