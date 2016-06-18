@@ -55,7 +55,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(OPENCV_DIR)\..\..\include2413</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OPENCV_DIR)\..\..\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -91,11 +91,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Board.cc" />
+    <ClCompile Include="Database.cc" />
     <ClCompile Include="Main.cc" />
     <ClCompile Include="PortChat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Board.h" />
+    <ClInclude Include="Database.h" />
     <ClInclude Include="TileInfo.h" />
   </ItemGroup>
   <ItemGroup>

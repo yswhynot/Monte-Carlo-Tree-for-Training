@@ -24,12 +24,18 @@
     <ClCompile Include="PortChat.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Database.cc">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Board.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="TileInfo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Database.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

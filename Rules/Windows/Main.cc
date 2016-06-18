@@ -1,75 +1,43 @@
 #include "Board.h"
 #include "PortChat.cpp"
+#include "Database.h"
 
-#include <iostream>
-#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <sstream>
-#include <fstream>
-
-#include <opencv2/opencv.hpp>
-
-using namespace std;
-using namespace System;
-using namespace System::Data::SQLite;
-
-typedef bitset<DIM> STATE;
 
 #define TRIAL 5
 
-#define DBID 0
-#define DBBOARD 1
-#define DBRATE 2
-#define DBNUM 3
-#define DBWRATE 4
-#define DBCLASS 5
-
-#define NUMTHRESHOLD 1
-#define TOTALCLASS 10
-
 /** Function prototypes **/
-void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo);
-void playWithAI(SQLiteConnection^ db, int nGame, String^ portName = "");
-string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
-void playRandom(SQLiteConnection^ db, int nGame);
+void playByAI(Database^ db, int nGame, String^ portOne, String^ portTwo);
+void playWithAI(Database^ db, int nGame, String^ portName = "");
+string checkAllWinLose(Database^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite);
+void playRandom(Database^ db, int nGame);
 string randomStep(Board* board, vector<STATE>* states, int* winner);
 bool randomSteps(Board* board, vector<STATE>* states);
-bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states, bool allVariations = true);
-void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state);
-string bitsetToString(STATE state);
 void printStates(vector<STATE> states);
 void printState(STATE state);
-bool readDb(SQLiteConnection^ db, int num);
+bool readDb(Database^ db, int num);
 bool writeTrx(Board board, string filename, string players = "");
-void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
-void saveMixedImage(Board board, STATE state, string filename);
 void printBoardFromBitset(string state);
-void createTrainingTxt(SQLiteConnection^ db);
-void createTrainingTxt_mixed(SQLiteConnection^ db);
 void testCases();
 
 int main() {
     srand(time(0));
-	SQLiteConnection^ db = gcnew SQLiteConnection();
-	db->ConnectionString = "Data Source = trax.db";
-	db->Open();
+	
+	Database^ db = gcnew Database();
 	
 	//playByAI(db, 1000, "COM18", "COM24");
 
 	//playWithAI(db, 5000, "COM18");
 
-    playRandom(db, 1);
+	//playRandom(db, 1);
 
-    //readDb(db, 10);
+	//readDb(db, 10);
 
-	//createTrainingTxt_mixed(db); // Use it to convert the database. Please backup the database before executing it and make sure it is the original database
+	//db->createVariations();
 
-	db->Close();
-	delete (IDisposable^)db;
-
-	//printBoardFromBitset("000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100010010110100000000000000000000000000000000000000000000000000011001011001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+	db->createTrainingTxt(true);
 
     //testCases();
 
@@ -78,7 +46,7 @@ int main() {
     return 0;
 }
 
-void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo) {
+void playByAI(Database^ db, int nGame, String^ portOne, String^ portTwo) {
 	PortChat chatOne(portOne);
 	PortChat chatTwo(portTwo);
 
@@ -218,7 +186,7 @@ void playByAI(SQLiteConnection^ db, int nGame, String^ portOne, String^ portTwo)
 	}
 }
 
-void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
+void playWithAI(Database^ db, int nGame, String^ portName) {
 	std::cout << "Start playing...\n";
 
 	PortChat portChat(portName);
@@ -243,6 +211,7 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 			waitForInit = false;
 		}
 		// If white, do the first step
+		AIWhite = true;
 		if (msg->Equals("-W")) {
 			string cmd = randomStep(&board, &states, &winner);
 			portChat.Write(gcnew String(cmd.c_str()));
@@ -294,15 +263,16 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 		if (handle) continue;
 
 		/** Update database **/
-		if (updateDb(db, (winner == 1) ? true : false, board, states)) {
-			//std::cout << "Successfully record game " << game << "\n";
+		if (db->updateDb((winner == 1) ? true : false, board, states, ALLVARIATION)) {
 			// Write trx
 			stringstream ss;
 			ss << "./game/" << game << ".trx";
-			if (writeTrx(board, ss.str(), (AIWhite? "AI vs Random": "Random vs AI"))) {
-				//std::cout << "Successfully create " << game << ".trx\n";
-				continue;
+			writeTrx(board, ss.str(), (AIWhite ? "AI vs Random" : "Random vs AI"));
+			// Output
+			if (game % 100 == 0) {
+				std::cout << "Successfully created " << game << " games\n";
 			}
+			continue;
 		}
 		else {
 			std::cout << "Interrupte at game " << game << "\n";
@@ -312,7 +282,7 @@ void playWithAI(SQLiteConnection^ db, int nGame, String^ portName) {
 }
 
 
-string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite) {
+string checkAllWinLose(Database^ db, Board* board, vector<STATE>* states, int gameIndex, bool AIWhite) {
 	int pos[TILENUM][4];
 	int posCnt;
 	int choiceCnt;
@@ -340,17 +310,18 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 				if (winner == (AIWhite? 1: 2)) {
 					vector<STATE> tempStates = *states;
 					tempStates.push_back(tempBoard.getBoardBitset());
-					if (updateDb(db, (winner == 1) ? true : false, tempBoard, tempStates)) {
-						//std::cout << "Successfully record game " << gameIndex << ", possible ending " << endIndex << "\n";
+					if (db->updateDb((winner == 1) ? true : false, tempBoard, tempStates, ALLVARIATION)) {
 						// Write trx
 						stringstream ss;
 						ss << "./game/" << gameIndex << "_" << endIndex << ".trx";
-						if (writeTrx(tempBoard, ss.str(), (AIWhite ? "AI vs Random" : "Random vs AI"))) {
-							//std::cout << "Successfully create " << gameIndex << "_" << endIndex << ".trx\n";
-						}
+						writeTrx(tempBoard, ss.str(), (AIWhite ? "AI vs Random" : "Random vs AI"));
 						endIndex++;
-
+						// Update record flag
 						record = true;
+						// Output
+						if (gameIndex % 100 == 0) {
+							std::cout << "Successfully created " << gameIndex << " games\n";
+						}
 					}
 					// Update ret
 					ret = tempBoard.getCmds().back();
@@ -370,14 +341,14 @@ string checkAllWinLose(SQLiteConnection^ db, Board* board, vector<STATE>* states
 	return ret;
 }
 
-void playRandom(SQLiteConnection^ db, int nGame) {
+void playRandom(Database^ db, int nGame) {
     for (int game = 1; game <= nGame; game++) {
         Board board;
         vector<STATE> states;
 
         bool win = randomSteps(&board, &states);
 
-        if (updateDb(db, win, board, states)) {
+        if (db->updateDb(win, board, states, ALLVARIATION)) {
             std::cout << "Successfully record game " << game << "\n";
             // Write trx
             stringstream ss;
@@ -477,110 +448,6 @@ void printState(STATE state) {
     std::cout << "\n";
 }
 
-bool updateDb(SQLiteConnection^ db, bool win, Board board, vector<STATE> states, bool allVariations) {
-	SQLiteCommand^ cmd = db->CreateCommand();
-	SQLiteTransaction^ tx = db->BeginTransaction();
-	cmd->Transaction = tx;
-
-	try {
-		for (int s = 0; s < states.size(); s++) {
-			if (allVariations == false) {
-				updateDbSingle(cmd, win, board, states[s]);
-			}
-			else {
-				// Original
-				updateDbSingle(cmd, win, board, states[s]);
-				// Original with 90 degree clockwise turn
-				board.loadBoardFromString(bitsetToString(states[s]));
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Original with 180 degree clockwise turn
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Original with 270 degree clockwise turn
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Flip
-				board.clockwise();
-				board.flip();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Flip with 90 degree clockwise turn
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Flip with 180 degree clockwise turn
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-				// Flip with 270 degree clockwise turn
-				board.clockwise();
-				updateDbSingle(cmd, win, board, board.getBoardBitset());
-			}
-		}
-		tx->Commit();
-		return true;
-	}
-	catch (SQLiteException^ E) {
-		std::cout << "Fail to commit\n";
-		tx->Rollback();
-		return false;
-	}
-}
-
-void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state) {
-	// Check if record exists
-	string sql = "SELECT * FROM winning_rate WHERE board = '" + bitsetToString(state) + "';";
-	cmd->CommandText = gcnew String(sql.c_str());
-	SQLiteDataReader^ reader = cmd->ExecuteReader();
-	if (reader->HasRows) {
-		reader->Read();
-		int rate = reader->GetInt32(DBRATE) + (win ? 1 : 0);
-		int num = reader->GetInt32(DBNUM) + 1;
-		// Finish reading
-		reader->Close();
-
-		stringstream ssRate;
-		ssRate << rate;
-		stringstream ssNum;
-		ssNum << num;
-		sql = "UPDATE winning_rate SET rate =" + ssRate.str() + ", num =" + ssNum.str() + " WHERE board = '" + bitsetToString(state) + "';";
-		cmd->CommandText = gcnew String(sql.c_str());
-		cmd->ExecuteNonQuery();
-	}
-	else {
-		// Finish reading
-		reader->Close();
-		// Insert new data
-		sql = "INSERT INTO winning_rate VALUES (NULL, '" + bitsetToString(state) + "'," + (win ? "1" : "0") + ",1);";
-		cmd->CommandText = gcnew String(sql.c_str());
-		cmd->ExecuteNonQuery();
-		// Save a new image
-		sql = "SELECT id FROM winning_rate WHERE board = '" + bitsetToString(state) + "';";
-		cmd->CommandText = gcnew String(sql.c_str());
-		reader = cmd->ExecuteReader();
-		reader->Read();
-		int id = reader->GetInt32(0);
-		reader->Close();
-		/*stringstream ssWhite;
-		ssWhite << "./image/W" << id << ".bmp";
-		string filenameWhite = ssWhite.str();
-		stringstream ssRed;
-		ssRed << "./image/R" << id << ".bmp";
-		string filenameRed = ssRed.str();
-		saveSeperateImages(board, states[s], filenameWhite, filenameRed);*/
-		stringstream ssMixed;
-		ssMixed << "./image/M" << id << ".bmp";
-		string filenameMixed = ssMixed.str();
-		saveMixedImage(board, state, filenameMixed);
-	}
-}
-
-string bitsetToString(STATE state) {
-    string ret = "";
-    for (int i = 0; i < DIM; i++) {
-        ret += state.test(i)? "1": "0";
-    }
-    return ret;
-}
-
 bool readDb(SQLiteConnection^ db, int num) {
 	SQLiteCommand^ cmd = db->CreateCommand();
     string sql = "SELECT * FROM winning_rate ORDER BY num DESC, rate DESC;";
@@ -639,232 +506,10 @@ bool writeTrx(Board board, string filename, string players) {
     return true;
 }
 
-void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed) {
-	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	board.loadBoardFromString(bitsetToString(state));
-	board.imageOutput(whiteImage, redImage);
-	cv::imwrite(filenameWhite, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage));
-	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
-}
-
-void saveMixedImage(Board board, STATE state, string filename) {
-	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	board.loadBoardFromString(bitsetToString(state));
-	board.imageOutput(whiteImage, redImage);
-	// Create channels
-	cv::Mat B = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage);
-	cv::Mat G = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage);
-	cv::Mat R = cv::Mat::zeros(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1);
-	vector<cv::Mat> channels;
-	channels.push_back(B);
-	channels.push_back(G);
-	channels.push_back(R);
-	cv::Mat img;
-	cv::merge(channels, img);
-
-	cv::imwrite(filename, img);
-}
-
 void printBoardFromBitset(string state) {
 	Board board;
 	board.loadBoardFromString(state);
 	board.printType();
-}
-
-void createTrainingTxt(SQLiteConnection^ db) {
-	/** Pre-handle on database **/
-	// Add column wRate
-	SQLiteCommand^ cmd = db->CreateCommand();
-	string sql = "ALTER TABLE winning_rate ADD COLUMN wRate DOUBLE;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Add column class
-	sql = "ALTER TABLE winning_rate ADD COLUMN class integer;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Delete unneccessary data
-	stringstream ssSql;
-	ssSql << "DELETE FROM winning_rate WHERE num < " << NUMTHRESHOLD;
-	cmd->CommandText = gcnew String(ssSql.str().c_str());
-	cmd->ExecuteNonQuery();
-	// Calculate winning rate
-	sql = "UPDATE winning_rate SET wRate = (CAST(rate AS DOUBLE) / num);";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Set class
-	for (int c = 0; c < TOTALCLASS; c++) {
-		double min = (double)c / TOTALCLASS;
-		double max = (double)(c + 1) / TOTALCLASS;
-
-		stringstream ssSql;
-		if (c == TOTALCLASS - 1) {
-			max = 1.0;
-			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate <= " << max << ";";
-		}
-		else {
-			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate < " << max << ";";
-		}
-
-		cmd->CommandText = gcnew String(ssSql.str().c_str());
-		cmd->ExecuteNonQuery();
-	}
-	/** Create TXTs for white **/
-	sql = "SELECT * FROM winning_rate;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	SQLiteDataReader^ reader = cmd->ExecuteReader();
-	
-	if (reader->HasRows) {
-		ofstream fTest("./txt/testW.txt");
-		ofstream fTrain("./txt/trainW.txt");
-		ofstream fVal("./txt/valW.txt");
-		
-		int cnt = 0;
-		while (reader->Read()) {
-			stringstream ss;
-			ss << "W" << reader->GetInt32(DBID) << ".jpeg " << reader->GetInt32(DBCLASS) << endl;
-			if (cnt % 4 == 0) {
-				fTest << ss.str();
-			}
-			else if (cnt % 5 == 0) {
-				fVal << ss.str();
-			} else {
-				fTrain << ss.str();
-			}
-			// Update counter
-			cnt++;
-		}
-		// Finish reading
-		reader->Close();
-		// Close files
-		fTest.close();
-		fTrain.close();
-		fVal.close();
-		std::cout << "Sucessfully create TXTs for white\n";
-	}
-	else {
-		// Finish reading
-		reader->Close();
-		std::cout << "No result found\n";
-	}
-	/** Create TXTs for red **/
-	sql = "SELECT * FROM winning_rate;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	reader = cmd->ExecuteReader();
-
-	if (reader->HasRows) {
-		ofstream fTest("./txt/testR.txt");
-		ofstream fTrain("./txt/trainR.txt");
-		ofstream fVal("./txt/valR.txt");
-
-		int cnt = 0;
-		while (reader->Read()) {
-			stringstream ss;
-			ss << "R" << reader->GetInt32(DBID) << ".jpeg " << TOTALCLASS - 1 - reader->GetInt32(DBCLASS) << endl;
-			if (cnt % 4 == 0) {
-				fTest << ss.str();
-			}
-			else if (cnt % 5 == 0) {
-				fVal << ss.str();
-			}
-			else {
-				fTrain << ss.str();
-			}
-			// Update counter
-			cnt++;
-		}
-		// Finish reading
-		reader->Close();
-		// Close files
-		fTest.close();
-		fTrain.close();
-		fVal.close();
-		std::cout << "Sucessfully create TXTs for red\n";
-	}
-	else {
-		// Finish reading
-		reader->Close();
-		std::cout << "No result found\n";
-	}
-}
-
-void createTrainingTxt_mixed(SQLiteConnection^ db) {
-	/** Pre-handle on database **/
-	// Add column wRate
-	SQLiteCommand^ cmd = db->CreateCommand();
-	string sql = "ALTER TABLE winning_rate ADD COLUMN wRate DOUBLE;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Add column class
-	sql = "ALTER TABLE winning_rate ADD COLUMN class integer;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Delete unneccessary data
-	stringstream ssSql;
-	ssSql << "DELETE FROM winning_rate WHERE num < " << NUMTHRESHOLD;
-	cmd->CommandText = gcnew String(ssSql.str().c_str());
-	cmd->ExecuteNonQuery();
-	// Calculate winning rate
-	sql = "UPDATE winning_rate SET wRate = (CAST(rate AS DOUBLE) / num);";
-	cmd->CommandText = gcnew String(sql.c_str());
-	cmd->ExecuteNonQuery();
-	// Set class
-	for (int c = 0; c < TOTALCLASS; c++) {
-		double min = (double)c / TOTALCLASS;
-		double max = (double)(c + 1) / TOTALCLASS;
-
-		stringstream ssSql;
-		if (c == TOTALCLASS - 1) {
-			max = 1.0;
-			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate <= " << max << ";";
-		}
-		else {
-			ssSql << "UPDATE winning_rate SET class = " << c << " WHERE wRate >= " << min << " AND wRate < " << max << ";";
-		}
-
-		cmd->CommandText = gcnew String(ssSql.str().c_str());
-		cmd->ExecuteNonQuery();
-	}
-	/** Create TXTs for white **/
-	sql = "SELECT * FROM winning_rate;";
-	cmd->CommandText = gcnew String(sql.c_str());
-	SQLiteDataReader^ reader = cmd->ExecuteReader();
-
-	if (reader->HasRows) {
-		ofstream fTest("./txt/test.txt");
-		ofstream fTrain("./txt/train.txt");
-		ofstream fVal("./txt/val.txt");
-
-		int cnt = 0;
-		while (reader->Read()) {
-			stringstream ss;
-			ss << "M" << reader->GetInt32(DBID) << ".bmp " << reader->GetInt32(DBCLASS) << endl;
-			if (cnt % 4 == 0) {
-				fTest << ss.str();
-			}
-			else if (cnt % 5 == 0) {
-				fVal << ss.str();
-			}
-			else {
-				fTrain << ss.str();
-			}
-			// Update counter
-			cnt++;
-		}
-		// Finish reading
-		reader->Close();
-		// Close files
-		fTest.close();
-		fTrain.close();
-		fVal.close();
-		std::cout << "Sucessfully create TXTs for mixed\n";
-	}
-	else {
-		// Finish reading
-		reader->Close();
-		std::cout << "No result found\n";
-	}
 }
 
 void testCases() {
