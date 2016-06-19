@@ -31,13 +31,13 @@ int main() {
 
 	//playWithAI(db, 5000, "COM18");
 
-	//playRandom(db, 1);
+	playRandom(db, 1);
 
 	//readDb(db, 10);
 
 	//db->createVariations();
 
-	db->createTrainingTxt(true);
+	//db->createTrainingTxt(true);
 
     //testCases();
 

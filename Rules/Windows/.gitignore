@@ -1,7 +1,5 @@
 # User-defined
 /Debug/*
-/image/*
-/game/*
 *.db
 
 # Compiled Object files

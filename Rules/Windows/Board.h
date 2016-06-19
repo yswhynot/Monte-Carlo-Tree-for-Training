@@ -30,6 +30,7 @@ public:
     vector<string> getCmds();
 	void boardConverter(bool* white, bool* red);
 	void imageOutput(unsigned char* imageWhite, unsigned char* imageRed);
+	void mapOutput(unsigned char* map);
 	void loadBoardFromString(string state);
 	void clockwise();
 	void flip();

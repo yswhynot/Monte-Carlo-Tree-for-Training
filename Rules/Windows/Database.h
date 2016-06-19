@@ -42,7 +42,7 @@ private:
 	void copyDbSingle(SQLiteCommand^ cmd, Board board, STATE state, int rate, int num, bool mix);
 	string bitsetToString(STATE state);
 	void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
-	void saveMixedImage(Board board, STATE state, string filename);
+	void saveMixedImage(Board board, STATE state, string filenameColor, string filenameMap);
 	SQLiteConnection^ db;
 };
 

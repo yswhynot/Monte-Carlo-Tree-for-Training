@@ -2523,6 +2523,52 @@ void Board::imageOutput(unsigned char* imageWhite, unsigned char* imageRed) {
 	}
 }
 
+void Board::mapOutput(unsigned char* map) {
+	// Output initialization
+	for (int row = 0; row < OUTPUTWIDTH; row++) {
+		for (int col = 0; col < OUTPUTWIDTH; col++) {
+			map[row * OUTPUTWIDTH + col] = 0;
+		}
+	}
+
+	// Get the nine-bit information
+	bool white[OUTPUTWIDTH * OUTPUTWIDTH];
+	bool red[OUTPUTWIDTH * OUTPUTWIDTH];
+	this->boardConverter(white, red);
+
+	TileInfo* whiteTileInfos;
+	whiteTileInfos = this->getTileInfos(true);
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
+			if (whiteTileInfos[row * BOARDWIDTH + col].valid) {
+				for (int rr = -1; rr <= 1; rr++) {
+					for (int cc = -1; cc <= 1; cc++) {
+						if (white[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == true) {
+							map[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] += (whiteTileInfos[row * BOARDWIDTH + col].attack) ? 192 : 128;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	TileInfo* redTileInfos;
+	redTileInfos = this->getTileInfos(false);
+	for (int row = 0; row < BOARDWIDTH; row++) {
+		for (int col = 0; col < BOARDWIDTH; col++) {
+			if (redTileInfos[row * BOARDWIDTH + col].valid) {
+				for (int rr = -1; rr <= 1; rr++) {
+					for (int cc = -1; cc <= 1; cc++) {
+						if (red[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] == true) {
+							map[(2 * row + rr) * OUTPUTWIDTH + 2 * col + cc] += (redTileInfos[row * BOARDWIDTH + col].attack) ? 48 : 16;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 void Board::loadBoardFromString(string state) {
 	// Load board
 	bitset<DIM> stateBitset;

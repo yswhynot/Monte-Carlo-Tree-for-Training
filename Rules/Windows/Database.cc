@@ -98,10 +98,13 @@ void Database::updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE s
 		int id = reader->GetInt32(0);
 		reader->Close();
 		if (mix) {
-			stringstream ssMixed;
-			ssMixed << "./image/M" << id << ".bmp";
-			string filenameMixed = ssMixed.str();
-			this->saveMixedImage(board, state, filenameMixed);
+			stringstream ssColor;
+			ssColor << "./image/M" << id << ".bmp";
+			string filenameColor = ssColor.str();
+			stringstream ssMap;
+			ssMap << "./map/M" << id << ".bmp";
+			string filenameMap = ssMap.str();
+			this->saveMixedImage(board, state, filenameColor, filenameMap);
 		}
 		else {
 			stringstream ssWhite;
@@ -132,10 +135,11 @@ void Database::saveSeperateImages(Board board, STATE state, string filenameWhite
 	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
 }
 
-void Database::saveMixedImage(Board board, STATE state, string filename) {
+void Database::saveMixedImage(Board board, STATE state, string filenameColor, string filenameMap) {
+	board.loadBoardFromString(bitsetToString(state));
+
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
 	unsigned char redImage[OUTPUTWIDTH * OUTPUTWIDTH];
-	board.loadBoardFromString(bitsetToString(state));
 	board.imageOutput(whiteImage, redImage);
 	// Create channels
 	cv::Mat B = cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, whiteImage);
@@ -147,8 +151,11 @@ void Database::saveMixedImage(Board board, STATE state, string filename) {
 	channels.push_back(R);
 	cv::Mat img;
 	cv::merge(channels, img);
+	cv::imwrite(filenameColor, img);
 
-	cv::imwrite(filename, img);
+	unsigned char map[OUTPUTWIDTH * OUTPUTWIDTH];
+	board.mapOutput(map);
+	cv::imwrite(filenameMap, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, map));
 }
 
 void Database::createTrainingTxt(bool mix) {
@@ -367,10 +374,13 @@ void Database::copyDbSingle(SQLiteCommand^ cmd, Board board, STATE state, int ra
 		// Finish reading
 		reader->Close();
 		if (mix) {
-			stringstream ssMixed;
-			ssMixed << "./image/M" << id << ".bmp";
-			string filenameMixed = ssMixed.str();
-			this->saveMixedImage(board, state, filenameMixed);
+			stringstream ssColor;
+			ssColor << "./image/M" << id << ".bmp";
+			string filenameColor = ssColor.str();
+			stringstream ssMap;
+			ssMap << "./map/M" << id << ".bmp";
+			string filenameMap = ssMap.str();
+			this->saveMixedImage(board, state, filenameColor, filenameMap);
 		}
 		else {
 			stringstream ssWhite;
