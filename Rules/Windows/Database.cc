@@ -281,9 +281,11 @@ void Database::createTrainingTxt(bool mix) {
 
 bool Database::createVariations() {
 	// Read all states in the database
+	std::cout << "Reading from database...\n";
 	vector<string> states;
 	vector<int> rates;
 	vector<int> nums;
+	int maxId;
 
 	SQLiteCommand^ cmd = this->db->CreateCommand();
 	string sql = "SELECT * FROM winning_rate;";
@@ -300,6 +302,11 @@ bool Database::createVariations() {
 			states.push_back(state);
 			rates.push_back(rate);
 			nums.push_back(num);
+			// Update maximum id
+			int id = reader->GetInt32(DBID);
+			if (id >= maxId) {
+				maxId = id;
+			}
 		}
 		// Finish reading
 		reader->Close();
@@ -311,12 +318,15 @@ bool Database::createVariations() {
 		return false;
 	}
 
+	maxId++; // Need to add one more since the last value is the last record in database
+
 	int record = states.size();
 	bool* checked = new bool[record];
 	for (int i = 0; i < record; i++) {
 		checked[i] = false;
 	}
 
+	std::cout << "Start creating variations...\n";
 	cmd = this->db->CreateCommand();
 	SQLiteTransaction^ tx = this->db->BeginTransaction();
 	cmd->Transaction = tx;
@@ -327,27 +337,27 @@ bool Database::createVariations() {
 				board.loadBoardFromString(states[s]);
 				// Original with 90 degree clockwise turn
 				board.clockwise();
-				int pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				int pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 				// Original with 180 degree clockwise turn
 				board.clockwise();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 				// Original with 270 degree clockwise turn
 				board.clockwise();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
@@ -355,43 +365,49 @@ bool Database::createVariations() {
 				// Flip
 				board.clockwise();
 				board.flip();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 				// Flip with 90 degree clockwise turn
 				board.clockwise();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 				// Flip with 180 degree clockwise turn
 				board.clockwise();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 				// Flip with 270 degree clockwise turn
 				board.clockwise();
-				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()), s + 1);
 				if (pos == -1) {
-					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+					this->updateDbVariation(cmd, board, maxId++, board.getBoardBitset(), rates[s], nums[s], MIX);
 				}
 				else {
 					checked[pos] = true;
 				}
 			}
+
+			// Show log
+			if ((s + 1) % 100 == 0) {
+				std::cout << "Finish creating " << (s + 1) << " former records' variations\n";
+			}
 		}
 		tx->Commit();
+		std::cout << "Successfully created variations\n";
 
 		delete[] checked;
 		return true;
@@ -405,8 +421,8 @@ bool Database::createVariations() {
 	}
 }
 
-int Database::checkVariation(vector<string> states, string state) {
-	for (int s = 0; s < states.size(); s++) {
+int Database::checkVariation(vector<string> states, string state, int begin) {
+	for (int s = begin; s < states.size(); s++) {
 		if (states[s].compare(state) == 0) {
 			return s;
 		}
@@ -414,20 +430,13 @@ int Database::checkVariation(vector<string> states, string state) {
 	return -1;
 }
 
-void Database::updateDbVariation(SQLiteCommand^ cmd, Board board, STATE state, int rate, int num, bool mix) {
+void Database::updateDbVariation(SQLiteCommand^ cmd, Board board, int id, STATE state, int rate, int num, bool mix) {
 	stringstream ss;
-	ss << "INSERT INTO winning_rate VALUES (NULL, '" << this->bitsetToString(state) << "'," << rate << "," << num << ");";
+	ss << "INSERT INTO winning_rate VALUES (" << id << ", '" << this->bitsetToString(state) << "'," << rate << "," << num << ");";
 	string sql = ss.str();
 	cmd->CommandText = gcnew String(sql.c_str());
 	cmd->ExecuteNonQuery();
 	// Save a new image
-	sql = "SELECT id FROM winning_rate WHERE board = '" + this->bitsetToString(state) + "';";
-	cmd->CommandText = gcnew String(sql.c_str());
-	SQLiteDataReader^ reader = cmd->ExecuteReader();
-	reader->Read();
-	int id = reader->GetInt32(0);
-	// Finish reading
-	reader->Close();
 	if (mix) {
 		stringstream ssColor;
 		ssColor << "./image/M" << id << ".bmp";
