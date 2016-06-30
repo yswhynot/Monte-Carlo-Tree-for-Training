@@ -311,89 +311,139 @@ bool Database::createVariations() {
 		return false;
 	}
 
+	int record = states.size();
+	bool* checked = new bool[record];
+	for (int i = 0; i < record; i++) {
+		checked[i] = false;
+	}
+
 	cmd = this->db->CreateCommand();
 	SQLiteTransaction^ tx = this->db->BeginTransaction();
 	cmd->Transaction = tx;
 	try {
-		for (int s = 0; s < states.size(); s++) {
-			Board board;
-			// Original with 90 degree clockwise turn
-			board.loadBoardFromString(states[s]);
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Original with 180 degree clockwise turn
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Original with 270 degree clockwise turn
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Flip
-			board.clockwise();
-			board.flip();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Flip with 90 degree clockwise turn
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Flip with 180 degree clockwise turn
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
-			// Flip with 270 degree clockwise turn
-			board.clockwise();
-			this->copyDbSingle(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+		for (int s = 0; s < record; s++) {
+			if (checked[s] == false) {
+				Board board;
+				board.loadBoardFromString(states[s]);
+				// Original with 90 degree clockwise turn
+				board.clockwise();
+				int pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Original with 180 degree clockwise turn
+				board.clockwise();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Original with 270 degree clockwise turn
+				board.clockwise();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Flip
+				board.clockwise();
+				board.flip();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Flip with 90 degree clockwise turn
+				board.clockwise();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Flip with 180 degree clockwise turn
+				board.clockwise();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+				// Flip with 270 degree clockwise turn
+				board.clockwise();
+				pos = this->checkVariation(states, this->bitsetToString(board.getBoardBitset()));
+				if (pos == -1) {
+					this->updateDbVariation(cmd, board, board.getBoardBitset(), rates[s], nums[s], MIX);
+				}
+				else {
+					checked[pos] = true;
+				}
+			}
 		}
 		tx->Commit();
+
+		delete[] checked;
 		return true;
 	}
 	catch (SQLiteException^ E) {
 		std::cout << "Fail to commit\n";
 		tx->Rollback();
+
+		delete[] checked;
 		return false;
 	}
 }
 
-void Database::copyDbSingle(SQLiteCommand^ cmd, Board board, STATE state, int rate, int num, bool mix) {
-	// Check if record exists
-	string sql = "SELECT * FROM winning_rate WHERE board = '" + this->bitsetToString(state) + "';";
-	cmd->CommandText = gcnew String(sql.c_str());
-	SQLiteDataReader^ reader = cmd->ExecuteReader();
-	if (reader->HasRows == false) {
-		// Finish reading
-		reader->Close();
-		// Insert new data
-		stringstream ss;
-		ss << "INSERT INTO winning_rate VALUES (NULL, '" << this->bitsetToString(state) << "'," << rate << "," << num << ");";
-		sql = ss.str();
-		cmd->CommandText = gcnew String(sql.c_str());
-		cmd->ExecuteNonQuery();
-		// Save a new image
-		sql = "SELECT id FROM winning_rate WHERE board = '" + this->bitsetToString(state) + "';";
-		cmd->CommandText = gcnew String(sql.c_str());
-		reader = cmd->ExecuteReader();
-		reader->Read();
-		int id = reader->GetInt32(0);
-		// Finish reading
-		reader->Close();
-		if (mix) {
-			stringstream ssColor;
-			ssColor << "./image/M" << id << ".bmp";
-			string filenameColor = ssColor.str();
-			stringstream ssMap;
-			ssMap << "./map/M" << id << ".bmp";
-			string filenameMap = ssMap.str();
-			this->saveMixedImage(board, state, filenameColor, filenameMap);
-		}
-		else {
-			stringstream ssWhite;
-			ssWhite << "./image/W" << id << ".bmp";
-			string filenameWhite = ssWhite.str();
-			stringstream ssRed;
-			ssRed << "./image/R" << id << ".bmp";
-			string filenameRed = ssRed.str();
-			this->saveSeperateImages(board, state, filenameWhite, filenameRed);
+int Database::checkVariation(vector<string> states, string state) {
+	for (int s = 0; s < states.size(); s++) {
+		if (states[s].compare(state) == 0) {
+			return s;
 		}
 	}
+	return -1;
+}
+
+void Database::updateDbVariation(SQLiteCommand^ cmd, Board board, STATE state, int rate, int num, bool mix) {
+	stringstream ss;
+	ss << "INSERT INTO winning_rate VALUES (NULL, '" << this->bitsetToString(state) << "'," << rate << "," << num << ");";
+	string sql = ss.str();
+	cmd->CommandText = gcnew String(sql.c_str());
+	cmd->ExecuteNonQuery();
+	// Save a new image
+	sql = "SELECT id FROM winning_rate WHERE board = '" + this->bitsetToString(state) + "';";
+	cmd->CommandText = gcnew String(sql.c_str());
+	SQLiteDataReader^ reader = cmd->ExecuteReader();
+	reader->Read();
+	int id = reader->GetInt32(0);
+	// Finish reading
+	reader->Close();
+	if (mix) {
+		stringstream ssColor;
+		ssColor << "./image/M" << id << ".bmp";
+		string filenameColor = ssColor.str();
+		stringstream ssMap;
+		ssMap << "./map/M" << id << ".bmp";
+		string filenameMap = ssMap.str();
+		this->saveMixedImage(board, state, filenameColor, filenameMap);
+	}
 	else {
-		// Finish reading
-		reader->Close();
+		stringstream ssWhite;
+		ssWhite << "./image/W" << id << ".bmp";
+		string filenameWhite = ssWhite.str();
+		stringstream ssRed;
+		ssRed << "./image/R" << id << ".bmp";
+		string filenameRed = ssRed.str();
+		this->saveSeperateImages(board, state, filenameWhite, filenameRed);
 	}
 }
