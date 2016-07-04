@@ -40,7 +40,7 @@ public:
 private:
 	void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state, bool mix);
 	int checkVariation(vector<string> states, string state, int begin);
-	void updateDbVariation(SQLiteCommand^ cmd, Board board, int id, STATE state, int rate, int num, bool mix);
+	bool updateDbVariation(Board board, STATE state, int rate, int num, bool mix);
 	string bitsetToString(STATE state);
 	void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
 	void saveMixedImage(Board board, STATE state, string filenameColor, string filenameMap);
