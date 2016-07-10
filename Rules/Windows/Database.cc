@@ -101,10 +101,11 @@ void Database::updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE s
 			stringstream ssColor;
 			ssColor << "./image/M" << id << ".bmp";
 			string filenameColor = ssColor.str();
+			this->saveMixedImage(board, state, filenameColor);
 			stringstream ssMap;
 			ssMap << "./map/M" << id << ".bmp";
 			string filenameMap = ssMap.str();
-			this->saveMixedImage(board, state, filenameColor, filenameMap);
+			this->saveFeatureMap(board, state, filenameMap);
 		}
 		else {
 			stringstream ssWhite;
@@ -135,7 +136,7 @@ void Database::saveSeperateImages(Board board, STATE state, string filenameWhite
 	cv::imwrite(filenameRed, cv::Mat(OUTPUTWIDTH, OUTPUTWIDTH, CV_8UC1, redImage));
 }
 
-void Database::saveMixedImage(Board board, STATE state, string filenameColor, string filenameMap) {
+void Database::saveMixedImage(Board board, STATE state, string filenameColor) {
 	board.loadBoardFromString(bitsetToString(state));
 
 	unsigned char whiteImage[OUTPUTWIDTH * OUTPUTWIDTH];
@@ -152,6 +153,10 @@ void Database::saveMixedImage(Board board, STATE state, string filenameColor, st
 	cv::Mat img;
 	cv::merge(channels, img);
 	cv::imwrite(filenameColor, img);
+}
+
+void Database::saveFeatureMap(Board board, STATE state, string filenameMap) {
+	board.loadBoardFromString(bitsetToString(state));
 
 	unsigned char map[OUTPUTWIDTH * OUTPUTWIDTH];
 	board.mapOutput(map);
@@ -426,6 +431,38 @@ bool Database::createVariations() {
 	return true;
 }
 
+void Database::saveFeatureMaps() {
+	std::cout << "Reading from database...\n";
+	SQLiteCommand^ cmd = this->db->CreateCommand();
+	string sql = "SELECT * FROM winning_rate;";
+	cmd->CommandText = gcnew String(sql.c_str());
+	SQLiteDataReader^ reader = cmd->ExecuteReader();
+	std::cout << "Start creating feature maps...\n";
+	if (reader->HasRows) {
+		while (reader->Read()) {
+			// Get board
+			char* sStr = (char*)(void*)System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(reader->GetString(DBBOARD));
+			string state(sStr);
+			// Get id
+			int id = reader->GetInt32(DBID);
+			// Create board
+			Board board;
+			board.loadBoardFromString(state);
+			// Save mixed image
+			stringstream ssMap;
+			ssMap << "./map/M" << id << ".bmp";
+			string filenameMap = ssMap.str();
+			this->saveFeatureMap(board, board.getBoardBitset(), filenameMap);
+			// Output
+			if (id % 100 == 0) {
+				std::cout << "Finish creating " << id << " feature maps\n";
+			}
+		}
+	}
+	reader->Close();
+	std::cout << "Finished\n";
+}
+
 int Database::checkVariation(vector<string> states, string state, int begin) {
 	for (int s = begin; s < states.size(); s++) {
 		if (states[s].compare(state) == 0) {
@@ -464,10 +501,11 @@ bool Database::updateDbVariation(Board board, STATE state, int rate, int num, bo
 			stringstream ssColor;
 			ssColor << "./image/M" << id << ".bmp";
 			string filenameColor = ssColor.str();
+			this->saveMixedImage(board, state, filenameColor);
 			stringstream ssMap;
 			ssMap << "./map/M" << id << ".bmp";
 			string filenameMap = ssMap.str();
-			this->saveMixedImage(board, state, filenameColor, filenameMap);
+			this->saveFeatureMap(board, state, filenameMap);
 		}
 		else {
 			stringstream ssWhite;

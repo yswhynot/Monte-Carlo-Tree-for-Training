@@ -36,6 +36,7 @@ public:
 	SQLiteConnection^ getDb();
 	void createTrainingTxt(bool mix);
 	bool createVariations();
+	void saveFeatureMaps();
 	bool updateDb(bool win, Board board, vector<STATE> states, bool allVariations);
 private:
 	void updateDbSingle(SQLiteCommand^ cmd, bool win, Board board, STATE state, bool mix);
@@ -43,7 +44,8 @@ private:
 	bool updateDbVariation(Board board, STATE state, int rate, int num, bool mix);
 	string bitsetToString(STATE state);
 	void saveSeperateImages(Board board, STATE state, string filenameWhite, string filenameRed);
-	void saveMixedImage(Board board, STATE state, string filenameColor, string filenameMap);
+	void saveMixedImage(Board board, STATE state, string filenameColor);
+	void saveFeatureMap(Board board, STATE state, string filenameMap);
 	SQLiteConnection^ db;
 };
 

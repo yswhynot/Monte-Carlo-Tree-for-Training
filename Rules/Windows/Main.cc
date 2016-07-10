@@ -35,7 +35,9 @@ int main() {
 
 	//readDb(db, 10);
 
-	db->createVariations();
+	//db->createVariations();
+
+	db->saveFeatureMaps();
 
 	//db->createTrainingTxt(true);
 
