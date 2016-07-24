@@ -44,6 +44,7 @@ private:
 	void saveCmd(int pos, char type);
     /** member variables **/
     bool m_start;
+	bool m_winnerLock;
     int m_winner; // 0: game is not end; 1: player 1 wins; 2: player 2 wins
     bitset<DIM> m_boardBitset;
     bitset<DIM> m_tempBoardBitset;

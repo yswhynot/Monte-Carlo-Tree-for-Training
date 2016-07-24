@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TRIAL 5
+#define TRIAL 300
 
 /** Function prototypes **/
 void playByAI(Database^ db, int nGame, String^ portOne, String^ portTwo);
@@ -37,11 +37,11 @@ int main() {
 
 	//db->createVariations();
 
-	db->saveFeatureMaps();
+	//db->saveFeatureMaps();
 
 	//db->createTrainingTxt(true);
 
-    //testCases();
+    testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -519,7 +519,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0+ B1+ @1/ B0\\ A0/ @2+ E3+ E2+ @2\\ A0+ B0+ @4\\ H4/ H3/"));
+    winner = board.updateBoardByCommands(string("@0+ B1/ A0\\ B3/ C1\\ D2+ B4/ @3\\ B5+ D0/ E2+ F2/ E1/ E0/ F1/ A1\\ @4/ B0/"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list
