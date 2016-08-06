@@ -13,8 +13,8 @@ Board::Board() {
 void Board::reset() {
     // Reset start and end
     this->m_start = true;
-	this->m_winnerLock = false;
     this->m_winner = 0;
+	this->m_nowWhite = true;
     // Reset board
     this->m_boardBitset.reset();
     // Reset paths
@@ -90,6 +90,8 @@ bool Board::updateBoard(int pos, char type, int* winner) {
     }
     /* Perform single-tile-update and force play */
     if (this->singleTileUpdate(pos, type)) {
+		this->m_nowWhite = !this->m_nowWhite; // Change color of next player
+
         this->shiftTempBoardBitset(pos); // Shift the board
         this->m_boardBitset = this->m_tempBoardBitset; // Update the board
         this->m_maxRow = this->m_tempMaxRow;
@@ -266,18 +268,16 @@ bool Board::singleTileUpdate(int pos, char type) {
                 // Check top and bottom
                 if (topFlag && bottomFlag) {
                     // Check if win by loop
-                    if ((this->m_tempPaths[topPathPos + 2] == bottomPathPos + 1) &&
-                        (this->m_tempPaths[bottomPathPos] == topPathPos + 3)) {
-                        // Game ends, check winner
-                        if (this->m_tempBoardBitset.test(pos * 3)) {
-							if (this->m_winnerLock == false) {
+					if ((this->m_tempPaths[topPathPos + 2] == bottomPathPos + 1) &&
+						(this->m_tempPaths[bottomPathPos] == topPathPos + 3)) {
+						// Game ends, check winner
+						if (this->m_tempBoardBitset.test(pos * 3)) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
                         } else {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -315,14 +315,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
                                 } else {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -352,14 +350,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -384,15 +380,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -423,15 +416,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -451,14 +441,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                         (this->m_tempPaths[rightPathPos + 1] == leftPathPos + 4)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
-                        } else {
-							if (this->m_winnerLock == false) {
+						} else {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -496,14 +484,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -533,14 +519,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -565,15 +549,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -604,15 +585,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -677,14 +655,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                         (this->m_tempPaths[rightPathPos + 1] == topPathPos + 3)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3)) {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
-                        } else {
-							if (this->m_winnerLock == false) {
+						} else {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -722,14 +698,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -759,14 +733,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -791,15 +763,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -830,15 +799,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -858,14 +824,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                         (this->m_tempPaths[bottomPathPos] == leftPathPos + 4)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
-                        } else {
-							if (this->m_winnerLock == false) {
+						} else {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -903,14 +867,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -940,14 +902,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -972,15 +932,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1011,15 +968,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1084,14 +1038,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                         (this->m_tempPaths[leftPathPos + 3] == topPathPos + 3)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3)) {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
-                        } else {
-							if (this->m_winnerLock == false) {
+						} else {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -1129,14 +1081,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -1166,14 +1116,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -1206,15 +1154,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1245,15 +1190,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(pos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1273,14 +1215,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                         (this->m_tempPaths[rightPathPos + 1] == bottomPathPos + 1)) {
                         // Game ends, check winner
                         if (this->m_tempBoardBitset.test(pos * 3 + 2)) {
-							if (this->m_winnerLock == false) {
+							if (this->m_winner == 0 || this->m_nowWhite == false) {
 								this->m_winner = 2;
-								this->m_winnerLock = true;
 							}
-                        } else {
-							if (this->m_winnerLock == false) {
+						} else {
+							if (this->m_winner == 0 || this->m_nowWhite == true) {
 								this->m_winner = 1;
-								this->m_winnerLock = true;
 							}
                         }
                     } else {
@@ -1318,14 +1258,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (rowSpan && rowGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -1355,14 +1293,12 @@ bool Board::singleTileUpdate(int pos, char type) {
                             if (colSpan && colGap + 1 >= LINEGAP) {
                                 // Game wins, check winner
                                 if (this->m_tempBoardBitset.test(checkPos * 3 + 1)) {
-									if (this->m_winnerLock == false) {
+									if (this->m_winner == 0 || this->m_nowWhite == false) {
 										this->m_winner = 2;
-										this->m_winnerLock = true;
 									}
-                                } else {
-									if (this->m_winnerLock == false) {
+								} else {
+									if (this->m_winner == 0 || this->m_nowWhite == true) {
 										this->m_winner = 1;
-										this->m_winnerLock = true;
 									}
                                 }
                             }
@@ -1387,15 +1323,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (colSpan && colGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3 + 1)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1418,15 +1351,12 @@ bool Board::singleTileUpdate(int pos, char type) {
 						if (rowSpan && rowGap + 1 >= LINEGAP) {
 							// Game wins, check winner
 							if (this->m_tempBoardBitset.test(otherPos * 3)) {
-								if (this->m_winnerLock == false) {
+								if (this->m_winner == 0 || this->m_nowWhite == false) {
 									this->m_winner = 2;
-									this->m_winnerLock = true;
 								}
-							}
-							else {
-								if (this->m_winnerLock == false) {
+							} else {
+								if (this->m_winner == 0 || this->m_nowWhite == true) {
 									this->m_winner = 1;
-									this->m_winnerLock = true;
 								}
 							}
 						}
@@ -1449,7 +1379,6 @@ bool Board::singleTileUpdate(int pos, char type) {
         return true;
     } else {
         this->m_winner = 0; // Reset winner
-		this->m_winnerLock = false; // Reset lock
         return false;
     }
 }

@@ -27,7 +27,7 @@ int main() {
 	
 	Database^ db = gcnew Database();
 	
-	//playByAI(db, 1000, "COM18", "COM24");
+	playByAI(db, 1000, "COM31", "COM32");
 
 	//playWithAI(db, 5000, "COM18");
 
@@ -41,7 +41,7 @@ int main() {
 
 	//db->createTrainingTxt(true);
 
-    testCases();
+    //testCases();
 
     std::cout << "Press ENTER to continue...\n";
     getchar();
@@ -519,7 +519,7 @@ void testCases() {
     Board board;
     // Test update and print
     int winner;
-    winner = board.updateBoardByCommands(string("@0+ B1/ A0\\ B3/ C1\\ D2+ B4/ @3\\ B5+ D0/ E2+ F2/ E1/ E0/ F1/ A1\\ @4/ B0/"));
+    winner = board.updateBoardByCommands(string("@0+ B1+ C1/ C0/ D2+ E2+ E3+ A3+ E4+ A4\\ @4\\ G2+ C0+ @5\\ C2+ F5\\ D5/"));
     board.printType();
     std::cout << "Player "<< winner << " wins the game.\n";
 	// Test command list
